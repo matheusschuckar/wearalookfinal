@@ -43,7 +43,7 @@ export function useInfiniteProducts({ city, pageSize = 24 }: Options) {
       if (res.error) res = await attempt(selectExact);
       if (res.error) throw new Error(res.error.message);
 
-      return (res.data ?? []) as Product[];
+      return (res.data ?? []) as unknown as Product[];
     },
     [city, pageSize]
   );
