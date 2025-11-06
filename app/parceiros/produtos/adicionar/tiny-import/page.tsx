@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+// Importamos o Suspense
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 const SURFACE = "#F7F4EF";
@@ -49,9 +50,12 @@ function getProp<T = unknown>(obj: unknown, key: string): T | undefined {
   return (obj as Dict)[key] as T | undefined;
 }
 
-export default function TinyImportPage() {
+// ====================================================================
+// 1. TODA A LÓGICA DA PÁGINA FOI MOVIDA PARA ESTE COMPONENTE
+// ====================================================================
+function TinyImportContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams(); // <-- Agora isso é seguro
   const storeIdParam = searchParams.get("store_id");
   const storeId = storeIdParam ? Number(storeIdParam) : null;
 
@@ -736,5 +740,26 @@ export default function TinyImportPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+// ====================================================================
+// 2. ESTA É A NOVA PÁGINA (DEFAULT EXPORT)
+// Ela apenas renderiza o Suspense e o componente de conteúdo
+// ====================================================================
+export default function TinyImportPage() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          className="min-h-screen w-full flex items-center justify-center text-sm text-neutral-500"
+          style={{ backgroundColor: SURFACE }}
+        >
+          Carregando dados...
+        </div>
+      }
+    >
+      <TinyImportContent />
+    </Suspense>
   );
 }
