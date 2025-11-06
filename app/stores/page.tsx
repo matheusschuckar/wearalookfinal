@@ -188,7 +188,7 @@ async function fetchStoresFromProductsByCity(city: string): Promise<StoreCard[]>
     .from("products")
     .select("store_id,store_name,stores!inner(id,city)")
     .eq("is_active", true)
-    // @ts-expect-error supabase-js aceita path "stores.city"
+    // A LINHA @ts-expect-error FOI REMOVIDA DAQUI
     .eq("stores.city", city);
 
   if (error) {
