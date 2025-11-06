@@ -1,0 +1,457 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
+
+const SURFACE = "#F7F4EF";
+
+type StoreRow = {
+  id: number;
+  name: string;
+};
+
+export const dynamic = "force-dynamic";
+
+export default function PartnerProductImportCsvPage() {
+  const router = useRouter();
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [loggedEmail, setLoggedEmail] = useState<string>("");
+  const [storeName, setStoreName] = useState<string>("");
+  const [storeId, setStoreId] = useState<number | null>(null);
+
+  const [fileContent, setFileContent] = useState<string>("");
+  const [rowsPreview, setRowsPreview] = useState<Array<Record<string, string>>>([]);
+  const [parsedOk, setParsedOk] = useState(false);
+
+  // auth + loja
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const { data: sess } = await supabase.auth.getSession();
+        const user = sess?.session?.user;
+        if (!user?.email) {
+          router.replace("/parceiros/login");
+          return;
+        }
+        const email = user.email.toLowerCase();
+        setLoggedEmail(email);
+
+        const { data: allowed, error: allowErr } = await supabase.rpc(
+          "partner_email_allowed",
+          { p_email: email }
+        );
+        if (allowErr) throw allowErr;
+        if (!allowed) {
+          await supabase.auth.signOut({ scope: "local" });
+          router.replace("/parceiros/login");
+          return;
+        }
+
+        const { data: row, error: sErr } = await supabase
+          .from("partner_emails")
+          .select("store_name")
+          .eq("email", email)
+          .eq("active", true)
+          .maybeSingle();
+        if (sErr) throw sErr;
+
+        const sName = row?.store_name || "";
+        setStoreName(sName);
+
+        if (sName) {
+          const { data: storeRow } = await supabase
+            .from("stores")
+            .select("id,name")
+            .eq("name", sName)
+            .maybeSingle<StoreRow>();
+          if (storeRow?.id) {
+            setStoreId(storeRow.id);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        setNotice("Não foi possível carregar seus dados.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [router]);
+
+  // parser bem simples de CSV, aceitando vírgula ou ponto e vírgula
+  function parseCsv(text: string): Array<Record<string, string>> {
+    if (!text.trim()) return [];
+    const firstLine = text.split(/\r?\n/)[0] || "";
+    const sep = firstLine.includes(";") ? ";" : ",";
+    const lines = text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    if (!lines.length) return [];
+
+    const header = lines[0].split(sep).map((h) => h.trim());
+    const dataLines = lines.slice(1);
+
+    const rows = dataLines.map((line) => {
+      const cols = line.split(sep).map((c) => c.trim());
+      const obj: Record<string, string> = {};
+      header.forEach((key, idx) => {
+        obj[key] = cols[idx] ?? "";
+      });
+      return obj;
+    });
+
+    return rows;
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = (ev.target?.result as string) || "";
+      setFileContent(text);
+      const rows = parseCsv(text);
+      setRowsPreview(rows.slice(0, 30));
+      setParsedOk(rows.length > 0);
+      setNotice(
+        rows.length
+          ? `Arquivo lido com ${rows.length} linha(s). Confira abaixo antes de importar.`
+          : "Arquivo vazio ou cabeçalho inválido."
+      );
+    };
+    reader.readAsText(file, "utf-8");
+  }
+
+  function toArray(v: string): string[] {
+    return v
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+
+  async function handleImport() {
+    if (!fileContent.trim()) {
+      setNotice("Selecione um arquivo CSV antes.");
+      return;
+    }
+    if (!storeName) {
+      setNotice("Loja não identificada.");
+      return;
+    }
+
+    const rows = parseCsv(fileContent);
+    if (!rows.length) {
+      setNotice("CSV sem linhas válidas.");
+      return;
+    }
+
+    setSaving(true);
+    setNotice(null);
+
+    try {
+      const payloads = rows.map((r) => {
+        const mainCat = (r["category"] || "").toString().trim();
+        const extraCatsStr = (r["categories"] || "").toString().trim();
+        const extraCats = toArray(extraCatsStr);
+        const allCats = Array.from(
+          new Set([mainCat, ...extraCats].filter((x) => x && x.length > 0))
+        );
+
+        const rawGender = (r["gender"] || "").toString().trim().toLowerCase();
+        let genderToSave: string | null = null;
+        if (rawGender === "female" || rawGender === "feminino") {
+          genderToSave = "female";
+        } else if (rawGender === "male" || rawGender === "masculino") {
+          genderToSave = "male";
+        } else if (rawGender === "both" || rawGender === "unissex") {
+          genderToSave = "female,male";
+        }
+
+        const photoStr = (r["photo_url"] || "").toString();
+        const sizesStr = (r["sizes"] || "").toString();
+
+        const stockStr = (r["stock_total"] || "").toString().trim();
+        const stockNum =
+          stockStr && !Number.isNaN(Number(stockStr))
+            ? Number(stockStr)
+            : null;
+
+        return {
+          name: (r["name"] || "").toString().trim() || null,
+          price_tag: (r["price_tag"] || "").toString().trim() || null,
+          photo_url: toArray(photoStr),
+          sizes: toArray(sizesStr),
+          category: mainCat || null,
+          gender: genderToSave,
+          categories: allCats,
+          stock_total: stockNum,
+          store_name: storeName,
+          eta_text: "30 - 60 min",
+          is_active: true,
+          view_count: 0,
+          view_count_today: 0,
+          featured: false,
+          code: null,
+          slug: null,
+          image_url: null,
+          price_cents: null,
+          store_id: storeId ?? null,
+        };
+      });
+
+      const chunkSize = 50;
+      let imported = 0;
+      for (let i = 0; i < payloads.length; i += chunkSize) {
+        const slice = payloads.slice(i, i + chunkSize);
+        const { error } = await supabase.from("products").insert(slice);
+        if (error) {
+          console.error("erro ao inserir slice", i, error);
+          setNotice(
+            `Importação parcialmente concluída. Inseridos ${imported} itens. Erro em uma das partes.`
+          );
+          setSaving(false);
+          return;
+        }
+        imported += slice.length;
+      }
+
+      setNotice(
+        `Importação concluída com sucesso. ${imported} produto(s) criado(s).`
+      );
+    } catch (err) {
+      console.error(err);
+      setNotice("Erro ao importar CSV.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut({ scope: "local" });
+    router.replace("/parceiros/login");
+  }
+
+  if (loading) {
+    return (
+      <main className="min-h-screen" style={{ backgroundColor: SURFACE }}>
+        <header className="w-full border-b border-[#E5E0DA]/80 bg-[#F7F4EF]/80 backdrop-blur-sm">
+          <div className="mx-auto max-w-6xl px-8 h-14 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-black flex items-center justify-center">
+                <span className="text-[13px] font-semibold tracking-tight text-white leading-none">
+                  L
+                </span>
+              </div>
+              <div className="flex flex-col leading-tight">
+                <span className="text-sm font-semibold tracking-tight text-black">
+                  Look
+                </span>
+                <span className="text-[11px] text-neutral-500">
+                  Importar CSV
+                </span>
+              </div>
+            </div>
+          </div>
+        </header>
+        <div className="mx-auto max-w-6xl px-8 pt-12 animate-pulse space-y-4">
+          <div className="h-7 w-64 bg-neutral-300/30 rounded-lg" />
+          <div className="h-4 w-80 bg-neutral-300/20 rounded-lg" />
+          <div className="h-44 w-full bg-white/60 rounded-3xl" />
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen" style={{ backgroundColor: SURFACE }}>
+      {/* topbar */}
+      <header className="w-full border-b border-[#E5E0DA]/80 bg-[#F7F4EF]/80 backdrop-blur-sm">
+        <div className="mx-auto max-w-6xl px-8 h-14 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push("/parceiros/produtos/adicionar")}
+              className="h-8 w-8 rounded-full bg-white/70 border border-neutral-200/70 flex items-center justify-center text-neutral-700 hover:text-black hover:bg-white transition"
+              aria-label="Voltar"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                fill="none"
+              >
+                <path
+                  d="M15 6l-6 6 6 6"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+
+            <div className="h-8 w-8 rounded-full bg-black flex items-center justify-center">
+              <span className="text-[13px] font-semibold tracking-tight text-white leading-none">
+                L
+              </span>
+            </div>
+            <div className="flex flex-col leading-tight">
+              <span className="text-sm font-semibold text-black">Look</span>
+              <span className="text-[11px] text-neutral-500">
+                Importar produtos via CSV
+              </span>
+            </div>
+            {storeName ? (
+              <span className="ml-2 text-[11px] px-3 py-1 rounded-full bg-white/60 border border-neutral-200/60 text-neutral-700">
+                {storeName}
+              </span>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-3">
+            {loggedEmail ? (
+              <span className="px-3 py-1 rounded-full bg-white/70 border border-neutral-200 text-[11px] text-neutral-700">
+                {loggedEmail}
+              </span>
+            ) : null}
+            <button
+              onClick={handleSignOut}
+              className="h-9 rounded-full px-4 text-xs font-medium text-neutral-700 hover:text-black transition border border-neutral-300/70 bg-white/70"
+            >
+              Sair
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* conteúdo */}
+      <div className="mx-auto max-w-6xl px-8 pt-10 pb-20 space-y-6">
+        <div>
+          <h1 className="text-[30px] font-semibold text-black tracking-tight">
+            Importar produtos por CSV
+          </h1>
+          <p className="text-sm text-neutral-600 mt-1 max-w-2xl">
+            Envie um arquivo CSV com as colunas{' '}
+            <code className="bg-white/60 px-2 py-1 rounded text-[11px]">
+              name, price_tag, photo_url, sizes, category, categories, gender,
+              stock_total
+            </code>
+            . Os demais campos serão preenchidos automaticamente.
+          </p>
+        </div>
+
+        {notice ? (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            {notice}
+          </p>
+        ) : null}
+
+        <div className="rounded-3xl bg-[#F6F2EC]/80 border border-[#E5E0DA]/80 p-6">
+          <div className="flex flex-col gap-4">
+            <label className="text-sm text-neutral-700 font-medium">
+              Arquivo CSV
+            </label>
+
+            <div className="mt-1 flex items-center gap-3 flex-wrap">
+              <a
+                href="https://docs.google.com/spreadsheets/d/1BoH2GJ9QObyPrNYG5jQW8x_aaMF6wSQM/export?format=xlsx"
+                className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-neutral-200 text-neutral-700 hover:bg-white transition"
+              >
+                Baixar modelo (.xlsx)
+              </a>
+              <span className="text-[11px] text-neutral-500">
+                Baixe, preencha no Excel/Numbers e exporte em CSV para enviar
+                abaixo.
+              </span>
+            </div>
+
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handleFileChange}
+              className="mt-4 block w-full text-sm text-neutral-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-black file:text-white hover:file:opacity-90"
+            />
+
+            {parsedOk ? (
+              <div className="text-[11px] text-neutral-500">
+                Pré-visualização das primeiras linhas
+              </div>
+            ) : null}
+
+            {parsedOk ? (
+              <div className="max-h-64 overflow-auto rounded-2xl bg-white/80 border border-[#e6ddd3]">
+                <table className="w-full text-left text-[11px] text-neutral-700">
+                  <thead className="sticky top-0 bg-white/90">
+                    <tr>
+                      <th className="px-3 py-2">name</th>
+                      <th className="px-3 py-2">price_tag</th>
+                      <th className="px-3 py-2">category</th>
+                      <th className="px-3 py-2">categories</th>
+                      <th className="px-3 py-2">gender</th>
+                      <th className="px-3 py-2">stock_total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rowsPreview.map((r, idx) => (
+                      <tr
+                        key={idx}
+                        className="odd:bg-white/0 even:bg-white/30"
+                      >
+                        <td className="px-3 py-2">{r["name"]}</td>
+                        <td className="px-3 py-2">{r["price_tag"]}</td>
+                        <td className="px-3 py-2">{r["category"]}</td>
+                        <td className="px-3 py-2">{r["categories"]}</td>
+                        <td className="px-3 py-2">{r["gender"]}</td>
+                        <td className="px-3 py-2">{r["stock_total"]}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+
+            <div className="pt-4 flex gap-3">
+              <button
+                onClick={handleImport}
+                disabled={saving || !parsedOk}
+                className="inline-flex items-center gap-2 rounded-full bg-black text-white px-6 py-2.5 text-sm font-medium hover:opacity-95 active:scale-[0.995] disabled:opacity-50"
+              >
+                {saving ? "Importando..." : "Importar CSV"}
+              </button>
+              <button
+                onClick={() => router.push("/parceiros/produtos")}
+                className="text-sm text-neutral-500 hover:text-neutral-800"
+              >
+                cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl bg-white/40 border border-[#E5E0DA]/60 p-4 text-[11px] text-neutral-500">
+          <p className="mb-2 font-medium text-neutral-700 text-sm">
+            Observações
+          </p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>Se o CSV usar ponto e vírgula, detectamos automaticamente.</li>
+            <li>O gênero pode ser female, male ou both.</li>
+            <li>
+              As categorias extras serão somadas à categoria principal e salvas
+              em
+              <code className="ml-1 px-2 py-[2px] bg-white/70 rounded">
+                categories
+              </code>
+              .
+            </li>
+            <li>O tempo de entrega vai ser salvo como 30 - 60 min.</li>
+            <li>Todos os produtos entram ativos.</li>
+          </ul>
+        </div>
+      </div>
+    </main>
+  );
+}
