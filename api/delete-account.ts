@@ -10,6 +10,7 @@ export default async function handler(req: any, res: any) {
     return res.status(500).json({ error: 'server_misconfigured' })
   }
 
+  // cliente admin apenas para operações de banco (opcional aqui)
   const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
     auth: { persistSession: false }
   })
@@ -39,15 +40,31 @@ export default async function handler(req: any, res: any) {
   if (!uid) return res.status(400).json({ error: 'invalid_token_payload' })
 
   try {
-    // Apaga o usuário no Auth
-    const { error: delErr } = await supabaseAdmin.auth.admin.deleteUser(uid)
-    if (delErr) {
-      console.error('deleteUser error:', delErr)
-      return res.status(500).json({ error: 'failed_delete_auth', detail: delErr.message })
+    // ---- 1) delete user from Supabase Auth via REST admin endpoint ----
+    // Endpoint: DELETE {SUPABASE_URL}/auth/v1/admin/users/{uid}
+    const adminUrl = `${SUPABASE_URL.replace(/\/$/, '')}/auth/v1/admin/users/${encodeURIComponent(uid)}`
+    const adminResp = await fetch(adminUrl, {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPABASE_SERVICE_ROLE,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    })
+
+    if (!adminResp.ok) {
+      const text = await adminResp.text().catch(() => '')
+      console.error('Failed to delete auth user:', adminResp.status, text)
+      return res.status(500).json({ error: 'failed_delete_auth', status: adminResp.status, detail: text })
     }
 
-    // Apaga a linha em user_profiles
-    const { error: pErr } = await supabaseAdmin.from('user_profiles').delete().eq('id', uid)
+    // ---- 2) delete the user_profiles row (idempotent) ----
+    const { error: pErr } = await supabaseAdmin
+      .from('user_profiles')
+      .delete()
+      .eq('id', uid)
+
     if (pErr) {
       console.error('failed delete profile row:', pErr)
       return res.status(500).json({ error: 'failed_delete_profile', detail: pErr.message })
