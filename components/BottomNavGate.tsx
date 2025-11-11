@@ -16,6 +16,8 @@ const HIDE_ROUTES = [
   "/onboarding",
   "/parceiros/login",
   "/developer",
+  "/terms",
+  "/privacy",
 ];
 
 export default function BottomNavGate() {
