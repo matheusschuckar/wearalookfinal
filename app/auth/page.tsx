@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
+import Link from "next/link";
 
 // evita SSG nessa rota e previne o "prerender-error" no build
 export const dynamic = "force-dynamic";
@@ -264,10 +265,16 @@ function AuthInner() {
           </form>
 
           <p className="mt-4 text-center text-[12px] leading-5 text-neutral-500">
-            By continuing, you agree to Look’s{" "}
-            <span className="underline">Terms</span> and{" "}
-            <span className="underline">Privacy</span>.
-          </p>
+  By continuing, you agree to Look’s{" "}
+  <Link href="/terms" className="underline" aria-label="Read Look terms">
+    Terms
+  </Link>{" "}
+  and{" "}
+  <Link href="/privacy" className="underline" aria-label="Read Look privacy policy">
+    Privacy
+  </Link>
+  .
+</p>
         </div>
       </div>
     </main>
