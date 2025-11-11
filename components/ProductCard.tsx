@@ -55,6 +55,7 @@ export default function ProductCard({
             fill
             sizes="(max-width: 768px) 50vw, 33vw"
             className="object-cover"
+            unoptimized
           />
         ) : (
           <div className="absolute inset-0 bg-neutral-100" />
