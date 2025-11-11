@@ -29,11 +29,21 @@ function extractUidFromPayload(payload: Record<string, unknown> | null): string 
 }
 
 export async function POST(req: Request) {
-  const SUPABASE_URL = process.env.SUPABASE_URL
-  const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE
+  // tenta suportar múltiplos nomes. NOTE: prefer server-only names.
+  const SUPABASE_URL =
+    process.env.SUPABASE_URL ??
+    process.env.NEXT_PUBLIC_SUPABASE_URL
+
+  const SUPABASE_SERVICE_ROLE =
+    process.env.SUPABASE_SERVICE_ROLE ??
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.SUPABASE_SERVICE_ROLE_SECRET
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE) {
-    return NextResponse.json({ error: 'Server misconfigured: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Server misconfigured: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE' },
+      { status: 500 }
+    )
   }
 
   const authHeader = req.headers.get('authorization') ?? ''
@@ -51,7 +61,6 @@ export async function POST(req: Request) {
 
   try {
     // 1) DELETE user from Auth via admin REST endpoint
-    // Endpoint: {SUPABASE_URL}/auth/v1/admin/users/{uid}
     const adminAuthUrl = `${SUPABASE_URL.replace(/\/$/, '')}/auth/v1/admin/users/${encodeURIComponent(uid)}`
     const adminResp = await fetch(adminAuthUrl, {
       method: 'DELETE',
@@ -64,7 +73,6 @@ export async function POST(req: Request) {
 
     if (!adminResp.ok) {
       const detailText = await adminResp.text()
-      // Return the actual HTTP status returned by Supabase admin endpoint to help debug
       return NextResponse.json(
         { error: 'Failed to delete auth user', status: adminResp.status, detail: detailText },
         { status: 500 }
@@ -72,7 +80,6 @@ export async function POST(req: Request) {
     }
 
     // 2) DELETE user_profiles row via PostgREST (REST) to be deterministic
-    // Endpoint: {SUPABASE_URL}/rest/v1/user_profiles?id=eq.{uid}
     const restUrl = `${SUPABASE_URL.replace(/\/$/, '')}/rest/v1/user_profiles?id=eq.${encodeURIComponent(uid)}`
     const restResp = await fetch(restUrl, {
       method: 'DELETE',
