@@ -26,6 +26,7 @@ export default function PartnerProductCreateManualPage() {
   const [name, setName] = useState<string>("");
   const [priceTag, setPriceTag] = useState<string>("");
   const [photoUrl, setPhotoUrl] = useState<string>("");
+  const [bio, setBio] = useState<string>("");
   const [category, setCategory] = useState<string>("");
   const [gender, setGender] = useState<string>("");
   const [categories, setCategories] = useState<string>("");
@@ -212,6 +213,7 @@ export default function PartnerProductCreateManualPage() {
         image_url: null,
         price_cents: null,
         store_id: storeId ?? null,
+        bio: toStr(bio) || null,
       };
 
       const { data, error } = await supabase
@@ -244,7 +246,8 @@ export default function PartnerProductCreateManualPage() {
     router.replace("/parceiros/login");
   }
 
-  const firstPhoto = toArray(photoUrl)[0] || "";
+  const photoUrls = toArray(photoUrl);
+  const firstPhoto = photoUrls[0] || "";
 
   const fieldRoot = "flex flex-col gap-1";
   const fieldLabel = "text-[11px] text-neutral-500 tracking-tight";
@@ -326,7 +329,7 @@ export default function PartnerProductCreateManualPage() {
               <span className="text-[11px] text-neutral-500">Novo produto</span>
             </div>
             {storeName ? (
-              <span className="ml-2 text-[11px] px-3 py-1 rounded-full bg-white/60 border border-neutral-200/60 text-neutral-700">
+              <span className="ml-2 text-[11px] px-3 py-1 rounded-full bgWHITE/60 border border-neutral-200/60 text-neutral-700">
                 {storeName}
               </span>
             ) : null}
@@ -386,6 +389,28 @@ export default function PartnerProductCreateManualPage() {
                   ) : null}
                 </div>
 
+                {photoUrls.length > 1 ? (
+                  <div className="absolute bottom-3 right-3 flex gap-1">
+                    {photoUrls.slice(1, 5).map((url, idx) => (
+                      <div
+                        key={idx}
+                        className="w-8 h-8 rounded-xl bg-[#F1EAE3] overflow-hidden border border-white/60 shadow-sm"
+                      >
+                        <div
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            backgroundImage: `url(${url})`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                            backgroundRepeat: "no-repeat",
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
                 {priceTag ? (
                   <div className="absolute -bottom-4 left-3 bg-black text-white text-[11px] px-4 py-[5px] rounded-full shadow-sm">
                     {priceTag}
@@ -404,7 +429,7 @@ export default function PartnerProductCreateManualPage() {
                     </span>
                   ) : null}
                   {gender ? (
-                    <span className="px-2 py-[3px] rounded-full bg-white text-[10px] text-neutral-700">
+                    <span className="px-2 py-[3px] rounded-full bgWHITE text-[10px] text-neutral-700">
                       {gender === "both" ? "female,male" : gender}
                     </span>
                   ) : null}
@@ -422,6 +447,19 @@ export default function PartnerProductCreateManualPage() {
                     onChange={(e) => setName(e.target.value)}
                     className={fieldInput}
                     placeholder="Ex: Sandália tira dupla..."
+                  />
+                </div>
+
+                <div className={fieldRoot}>
+                  <label className={fieldLabel}>
+                    Descrição do produto (bio)
+                  </label>
+                  <textarea
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    rows={3}
+                    className={fieldTextarea}
+                    placeholder="Conte um pouco sobre o produto, materiais, caimento..."
                   />
                 </div>
 
