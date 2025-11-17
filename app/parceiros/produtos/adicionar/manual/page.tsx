@@ -30,7 +30,6 @@ export default function PartnerProductCreateManualPage() {
   const [category, setCategory] = useState<string>("");
   const [gender, setGender] = useState<string>("");
   const [categories, setCategories] = useState<string>("");
-  const [stockTotal, setStockTotal] = useState<string>("");
 
   // NOVO: tamanhos com estoque
   const [sizeEntries, setSizeEntries] = useState<
@@ -201,7 +200,6 @@ export default function PartnerProductCreateManualPage() {
         category: primaryCategory || null,
         gender: genderArr,
         categories: allCats,
-        stock_total: stockTotalToSave,
         store_name: storeName,
         eta_text: "30 - 60 min",
         is_active: true,
@@ -471,22 +469,6 @@ export default function PartnerProductCreateManualPage() {
                     className={fieldInput}
                     placeholder="R$ 398"
                   />
-                </div>
-
-                {/* estoque total (opcional) */}
-                <div className={fieldRoot}>
-                  <label className={fieldLabel}>Estoque total (opcional)</label>
-                  <input
-                    value={stockTotal}
-                    onChange={(e) => setStockTotal(e.target.value)}
-                    className={fieldInput}
-                    placeholder="Ex: 10"
-                    inputMode="numeric"
-                  />
-                  <p className="text-[10px] text-neutral-400 mt-[2px]">
-                    Se deixar em branco, vamos somar os estoques de cada
-                    tamanho.
-                  </p>
                 </div>
 
                 {/* tamanhos com estoque */}
