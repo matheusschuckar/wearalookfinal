@@ -24,7 +24,9 @@ export default function PartnerProductImportCsvPage() {
   const [storeId, setStoreId] = useState<number | null>(null);
 
   const [fileContent, setFileContent] = useState<string>("");
-  const [rowsPreview, setRowsPreview] = useState<Array<Record<string, string>>>([]);
+  const [rowsPreview, setRowsPreview] = useState<
+    Array<Record<string, string>>
+  >([]);
   const [parsedOk, setParsedOk] = useState(false);
 
   // auth + loja
@@ -82,7 +84,7 @@ export default function PartnerProductImportCsvPage() {
     })();
   }, [router]);
 
-  // parser bem simples de CSV, aceitando vírgula ou ponto e vírgula
+  // parser simples de CSV, aceita vírgula ou ponto e vírgula
   function parseCsv(text: string): Array<Record<string, string>> {
     if (!text.trim()) return [];
     const firstLine = text.split(/\r?\n/)[0] || "";
@@ -163,34 +165,50 @@ export default function PartnerProductImportCsvPage() {
           new Set([mainCat, ...extraCats].filter((x) => x && x.length > 0))
         );
 
+        // gender como array, igual ao formulário manual
         const rawGender = (r["gender"] || "").toString().trim().toLowerCase();
-        let genderToSave: string | null = null;
+        let genderArr: string[] = [];
         if (rawGender === "female" || rawGender === "feminino") {
-          genderToSave = "female";
+          genderArr = ["female"];
         } else if (rawGender === "male" || rawGender === "masculino") {
-          genderToSave = "male";
-        } else if (rawGender === "both" || rawGender === "unissex") {
-          genderToSave = "female,male";
+          genderArr = ["male"];
+        } else if (
+          rawGender === "both" ||
+          rawGender === "unissex" ||
+          rawGender === "unisex"
+        ) {
+          genderArr = ["male", "female"];
         }
 
         const photoStr = (r["photo_url"] || "").toString();
         const sizesStr = (r["sizes"] || "").toString();
+        const sizeStocksStr = (r["size_stocks"] || "").toString();
 
-        const stockStr = (r["stock_total"] || "").toString().trim();
-        const stockNum =
-          stockStr && !Number.isNaN(Number(stockStr))
-            ? Number(stockStr)
-            : null;
+        const rawSizes = toArray(sizesStr);
+        const rawStocksStr = toArray(sizeStocksStr);
+
+        const len = Math.min(rawSizes.length, rawStocksStr.length);
+        const sizesArray: string[] = [];
+        const sizeStocksArray: number[] = [];
+
+        for (let i = 0; i < len; i++) {
+          const size = rawSizes[i]?.trim();
+          if (!size) continue;
+          const num = Number(rawStocksStr[i].toString().replace(",", "."));
+          sizesArray.push(size);
+          sizeStocksArray.push(Number.isFinite(num) ? num : 0);
+        }
 
         return {
           name: (r["name"] || "").toString().trim() || null,
+          bio: (r["bio"] || "").toString().trim() || null,
           price_tag: (r["price_tag"] || "").toString().trim() || null,
           photo_url: toArray(photoStr),
-          sizes: toArray(sizesStr),
+          sizes: sizesArray,
+          size_stocks: sizeStocksArray,
           category: mainCat || null,
-          gender: genderToSave,
+          gender: genderArr,
           categories: allCats,
-          stock_total: stockNum,
           store_name: storeName,
           eta_text: "30 - 60 min",
           is_active: true,
@@ -335,10 +353,10 @@ export default function PartnerProductImportCsvPage() {
             Importar produtos por CSV
           </h1>
           <p className="text-sm text-neutral-600 mt-1 max-w-2xl">
-            Envie um arquivo CSV com as colunas{' '}
+            Envie um arquivo CSV com as colunas{" "}
             <code className="bg-white/60 px-2 py-1 rounded text-[11px]">
-              name, price_tag, photo_url, sizes, category, categories, gender,
-              stock_total
+              name, bio, price_tag, photo_url, sizes, size_stocks, category,
+              categories, gender
             </code>
             . Os demais campos serão preenchidos automaticamente.
           </p>
@@ -364,7 +382,7 @@ export default function PartnerProductImportCsvPage() {
                 Baixar modelo (.xlsx)
               </a>
               <span className="text-[11px] text-neutral-500">
-                Baixe, preencha no Excel/Numbers e exporte em CSV para enviar
+                Baixe, preencha no Excel ou Numbers e exporte em CSV para enviar
                 abaixo.
               </span>
             </div>
@@ -378,12 +396,12 @@ export default function PartnerProductImportCsvPage() {
 
             {parsedOk ? (
               <div className="text-[11px] text-neutral-500">
-                Pré-visualização das primeiras linhas
+                Pré visualização das primeiras linhas
               </div>
             ) : null}
 
             {parsedOk ? (
-              <div className="max-h-64 overflow-auto rounded-2xl bg-white/80 border border-[#e6ddd3]">
+              <div className="max-h-64 overflow-auto rounded-2xl bg:white/80 bg-white/80 border border-[#e6ddd3]">
                 <table className="w-full text-left text-[11px] text-neutral-700">
                   <thead className="sticky top-0 bg-white/90">
                     <tr>
@@ -392,7 +410,8 @@ export default function PartnerProductImportCsvPage() {
                       <th className="px-3 py-2">category</th>
                       <th className="px-3 py-2">categories</th>
                       <th className="px-3 py-2">gender</th>
-                      <th className="px-3 py-2">stock_total</th>
+                      <th className="px-3 py-2">sizes</th>
+                      <th className="px-3 py-2">size_stocks</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -406,7 +425,8 @@ export default function PartnerProductImportCsvPage() {
                         <td className="px-3 py-2">{r["category"]}</td>
                         <td className="px-3 py-2">{r["categories"]}</td>
                         <td className="px-3 py-2">{r["gender"]}</td>
-                        <td className="px-3 py-2">{r["stock_total"]}</td>
+                        <td className="px-3 py-2">{r["sizes"]}</td>
+                        <td className="px-3 py-2">{r["size_stocks"]}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -447,7 +467,7 @@ export default function PartnerProductImportCsvPage() {
               </code>
               .
             </li>
-            <li>O tempo de entrega vai ser salvo como 30 - 60 min.</li>
+            <li>O tempo de entrega vai ser salvo como 30  60 min.</li>
             <li>Todos os produtos entram ativos.</li>
           </ul>
         </div>
