@@ -84,32 +84,70 @@ export default function PartnerProductImportCsvPage() {
     })();
   }, [router]);
 
-  // parser simples de CSV, aceita vírgula ou ponto e vírgula
-  function parseCsv(text: string): Array<Record<string, string>> {
-    if (!text.trim()) return [];
-    const firstLine = text.split(/\r?\n/)[0] || "";
-    const sep = firstLine.includes(";") ? ";" : ",";
-    const lines = text
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
+ // helper: divide uma linha de CSV respeitando aspas
+function splitCsvLine(line: string, sep: string): string[] {
+  const out: string[] = [];
+  let current = "";
+  let inQuotes = false;
 
-    if (!lines.length) return [];
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
 
-    const header = lines[0].split(sep).map((h) => h.trim());
-    const dataLines = lines.slice(1);
+    if (ch === '"') {
+      // trata aspas duplas escapadas ("")
+      const next = line[i + 1];
+      if (next === '"') {
+        current += '"';
+        i++; // pula a segunda aspa
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === sep && !inQuotes) {
+      out.push(current);
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  out.push(current);
+  return out;
+}
 
-    const rows = dataLines.map((line) => {
-      const cols = line.split(sep).map((c) => c.trim());
-      const obj: Record<string, string> = {};
-      header.forEach((key, idx) => {
-        obj[key] = cols[idx] ?? "";
-      });
-      return obj;
+// parser de CSV com suporte a aspas
+function parseCsv(text: string): Array<Record<string, string>> {
+  if (!text.trim()) return [];
+
+  const lines = text
+    .split(/\r?\n/)
+    .filter((l) => l.trim().length > 0);
+
+  if (!lines.length) return [];
+
+  const firstLine = lines[0];
+  const sep = firstLine.includes(";") ? ";" : ",";
+
+  const header = splitCsvLine(firstLine, sep).map((h) => h.trim());
+  const dataLines = lines.slice(1);
+
+  const rows = dataLines.map((raw) => {
+    const cols = splitCsvLine(raw, sep).map((c) => {
+      let v = c.trim();
+      // remove aspas externas, se tiver
+      if (v.startsWith('"') && v.endsWith('"') && v.length >= 2) {
+        v = v.slice(1, -1);
+      }
+      return v;
     });
 
-    return rows;
-  }
+    const obj: Record<string, string> = {};
+    header.forEach((key, idx) => {
+      obj[key] = cols[idx] ?? "";
+    });
+    return obj;
+  });
+
+  return rows;
+}
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
