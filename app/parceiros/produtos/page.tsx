@@ -30,6 +30,7 @@ export default function PartnerProductsPage() {
   const [storeName, setStoreName] = useState<string>("");
   const [loggedEmail, setLoggedEmail] = useState<string>("");
   const [products, setProducts] = useState<Product[]>([]);
+  const [deletingId, setDeletingId] = useState<string | number | null>(null);
 
   // 1) auth + store
   useEffect(() => {
@@ -130,6 +131,32 @@ export default function PartnerProductsPage() {
   function handleSignOut() {
     supabase.auth.signOut({ scope: "local" });
     router.replace("/parceiros/login");
+  }
+
+  async function handleDelete(prodId: string | number) {
+    if (!storeName) return;
+    const ok = window.confirm("Tem certeza que deseja excluir este produto?");
+    if (!ok) return;
+
+    setDeletingId(prodId);
+    setNotice(null);
+
+    try {
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", prodId)
+        .eq("store_name", storeName);
+
+      if (error) throw error;
+
+      setProducts((prev) => prev.filter((p) => p.id !== prodId));
+    } catch (err) {
+      console.error(err);
+      setNotice("Não foi possível excluir o produto.");
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
@@ -237,9 +264,17 @@ export default function PartnerProductsPage() {
                 : `/parceiros/produtos/${prod.id}`;
 
               return (
-                <button
+                <div
                   key={prod.id}
                   onClick={() => router.push(href)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      router.push(href);
+                    }
+                  }}
                   className="w-full rounded-2xl bg-white/65 border border-[#E5E0DA]/90 flex items-center gap-4 px-4 py-3 hover:bg-white/100 transition text-left shadow-[0_10px_30px_-23px_rgba(0,0,0,0.35)]"
                 >
                   {/* foto */}
@@ -322,7 +357,19 @@ export default function PartnerProductsPage() {
                       tocar para editar →
                     </span>
                   </div>
-                </button>
+
+                  {/* botão excluir */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(prod.id);
+                    }}
+                    className="ml-2 h-7 w-7 rounded-full border border-neutral-300 flex items-center justify-center text-[12px] text-neutral-500 hover:text-red-600 hover:border-red-400 transition shrink-0"
+                  >
+                    {deletingId === prod.id ? "…" : "×"}
+                  </button>
+                </div>
               );
             })
           )}
