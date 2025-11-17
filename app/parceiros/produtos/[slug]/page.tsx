@@ -60,6 +60,7 @@ type Product = {
   gender: string | string[] | null;
   categories: string[] | string | null;
   store_name: string | null;
+  bio?: string | null;
 };
 
 export const dynamic = "force-dynamic";
@@ -82,6 +83,7 @@ export default function PartnerProductDetailPage() {
   const [name, setName] = useState<string>("");
   const [priceTag, setPriceTag] = useState<string>("");
   const [photoUrl, setPhotoUrl] = useState<string>("");
+  const [bio, setBio] = useState<string>("");
   const [category, setCategory] = useState<string>("");
   const [gender, setGender] = useState<string>("");
   const [categories, setCategories] = useState<string>("");
@@ -163,7 +165,7 @@ export default function PartnerProductDetailPage() {
         const { data: p1 } = await supabase
           .from("products")
           .select(
-            "id, slug, name, price_tag, photo_url, sizes, size_stocks, category, gender, categories, store_name"
+            "id, slug, name, price_tag, photo_url, sizes, size_stocks, category, gender, categories, store_name, bio"
           )
           .eq("store_name", storeName)
           .eq("slug", slugParam)
@@ -175,7 +177,7 @@ export default function PartnerProductDetailPage() {
           const { data: p2 } = await supabase
             .from("products")
             .select(
-              "id, slug, name, price_tag, photo_url, sizes, size_stocks, category, gender, categories, store_name"
+              "id, slug, name, price_tag, photo_url, sizes, size_stocks, category, gender, categories, store_name, bio"
             )
             .eq("store_name", storeName)
             .eq("id", slugParam)
@@ -194,6 +196,7 @@ export default function PartnerProductDetailPage() {
         setPriceTag(prod.price_tag != null ? prod.price_tag.toString() : "");
         setPhotoUrl(toCommaString(prod.photo_url));
         setCategory(prod.category || "");
+        setBio(prod.bio || "");
 
         const uiGender = normalizeGenderForUI(prod.gender);
         setGender(uiGender);
@@ -316,6 +319,7 @@ export default function PartnerProductDetailPage() {
           category: toStr(category) || null,
           gender: genderArr,
           categories: toArray(categories),
+          bio: toStr(bio) || null,
         })
         .eq("id", productId)
         .eq("store_name", storeName);
@@ -334,7 +338,8 @@ export default function PartnerProductDetailPage() {
     }
   }
 
-  const firstPhoto = toArray(photoUrl)[0] || "";
+  const photoUrls = toArray(photoUrl);
+  const firstPhoto = photoUrls[0] || "";
 
   const fieldRoot = "flex flex-col gap-1";
   const fieldLabel = "text-[11px] text-neutral-500 tracking-tight";
@@ -381,7 +386,7 @@ export default function PartnerProductDetailPage() {
               </span>
             </div>
             <div className="flex flex-col leading-tight">
-              <span className="text-sm font-semibold text-black">Look</span>
+              <span className="text-sm font-semibold textBLACK">Look</span>
               <span className="text-[11px] text-neutral-500">
                 Editar produto
               </span>
@@ -458,6 +463,28 @@ export default function PartnerProductDetailPage() {
                       ) : null}
                     </div>
 
+                    {photoUrls.length > 1 ? (
+                      <div className="absolute bottom-3 right-3 flex gap-1">
+                        {photoUrls.slice(1, 5).map((url, idx) => (
+                          <div
+                            key={idx}
+                            className="w-8 h-8 rounded-xl bg-[#F1EAE3] overflow-hidden border border-white/60 shadow-sm"
+                          >
+                            <div
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                backgroundImage: `url(${url})`,
+                                backgroundSize: "cover",
+                                backgroundPosition: "center",
+                                backgroundRepeat: "no-repeat",
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+
                     {priceTag ? (
                       <div className="absolute -bottom-4 left-3 bg-black text-white text-[11px] px-4 py-[5px] rounded-full shadow-sm">
                         {priceTag}
@@ -495,6 +522,19 @@ export default function PartnerProductDetailPage() {
                         onChange={(e) => setName(e.target.value)}
                         className={fieldInput}
                         placeholder="Ex: Sandália tira dupla..."
+                      />
+                    </div>
+
+                    <div className={fieldRoot}>
+                      <label className={fieldLabel}>
+                        Descrição do produto (bio)
+                      </label>
+                      <textarea
+                        value={bio}
+                        onChange={(e) => setBio(e.target.value)}
+                        rows={3}
+                        className={fieldTextarea}
+                        placeholder="Conte um pouco sobre o produto, materiais, caimento..."
                       />
                     </div>
 
