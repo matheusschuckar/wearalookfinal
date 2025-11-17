@@ -186,9 +186,6 @@ export default function PartnerProductCreateManualPage() {
         return Number.isFinite(n) ? n : 0;
       });
 
-      // se a pessoa não preencheu estoque total, soma dos tamanhos
-      const totalFromSizes = sizeStocksArray.reduce((acc, n) => acc + n, 0);
-
       const insertPayload: Record<string, unknown> = {
         name: toStr(name) || null,
         price_tag: toStr(priceTag) || null,
