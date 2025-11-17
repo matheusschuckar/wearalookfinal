@@ -188,8 +188,6 @@ export default function PartnerProductCreateManualPage() {
 
       // se a pessoa não preencheu estoque total, soma dos tamanhos
       const totalFromSizes = sizeStocksArray.reduce((acc, n) => acc + n, 0);
-      const stockTotalToSave =
-        stockTotal.trim() !== "" ? Number(stockTotal) : totalFromSizes || null;
 
       const insertPayload: Record<string, unknown> = {
         name: toStr(name) || null,
