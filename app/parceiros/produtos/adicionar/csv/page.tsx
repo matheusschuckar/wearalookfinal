@@ -116,7 +116,7 @@ function splitCsvLine(line: string, sep: string): string[] {
 // detecta separador testando candidatos e escolhendo o que produz colunas consistentes
 function detectSeparator(text: string, candidates = [",", ";", "\t", "|"]): string {
   // pega primeiras N linhas úteis
-  const lines = text.replace(/\r\n/g, "\n").split("\n").filter((l) => l.trim().length > 0);
+  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter((l) => l.trim().length > 0);
   if (!lines.length) return ",";
 
   const sampleCount = Math.min(20, Math.max(2, lines.length));
@@ -161,6 +161,7 @@ function parseCsv(text: string): Array<Record<string, string>> {
   // normaliza quebras de linha e remove linhas vazias
   const lines = text
     .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
     .split("\n")
     .filter((l) => l.trim().length > 0);
 
