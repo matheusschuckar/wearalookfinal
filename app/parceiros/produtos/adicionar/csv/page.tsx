@@ -239,12 +239,13 @@ export default function PartnerProductImportCsvPage() {
     return out;
   }
 
-  // quebra campos tipo photo_url ou categories em array
+  // nova regra de split: semântica: split em ; e | sempre; split em vírgula apenas se houver espaço após a vírgula (",\s+")
   function toArray(v: string): string[] {
     if (!v || !v.toString().trim()) return [];
+    // regex: ,\s+  ou ;  ou |
     return v
       .toString()
-      .split(/[,;|]/)
+      .split(/(?:,\s+|;|\|)/)
       .map((s) => s.trim())
       .filter(Boolean);
   }
@@ -553,9 +554,10 @@ export default function PartnerProductImportCsvPage() {
                   </thead>
                   <tbody>
                     {rowsPreview.map((r, idx) => {
+                      // usar a mesma regra de split que toArray: split em ; ou | ou em ", " (vírgula + espaço)
                       const firstPhoto = (r["photo_url"] || "")
                         .toString()
-                        .split(/[,;|]/)
+                        .split(/(?:,\s+|;|\|)/)
                         .map((s) => s.trim())
                         .filter(Boolean)[0];
                       return (
@@ -575,7 +577,6 @@ export default function PartnerProductImportCsvPage() {
                                   alt="thumb"
                                   className="h-12 w-12 object-cover rounded"
                                   onError={(e) => {
-                                    // evitar erro visual se url inválida
                                     (e.target as HTMLImageElement).style.display = "none";
                                   }}
                                 />
