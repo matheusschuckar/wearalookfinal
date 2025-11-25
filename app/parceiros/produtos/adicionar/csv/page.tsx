@@ -113,6 +113,47 @@ function splitCsvLine(line: string, sep: string): string[] {
   return out;
 }
 
+// detecta separador testando candidatos e escolhendo o que produz colunas consistentes
+function detectSeparator(text: string, candidates = [",", ";", "\t", "|"]): string {
+  // pega primeiras N linhas úteis
+  const lines = text.replace(/\r\n/g, "\n").split("\n").filter((l) => l.trim().length > 0);
+  if (!lines.length) return ",";
+
+  const sampleCount = Math.min(20, Math.max(2, lines.length));
+  const sample = lines.slice(0, sampleCount);
+
+  let bestSep = ",";
+  let bestScore = -1;
+
+  candidates.forEach((sep) => {
+    try {
+      const counts = sample.map((ln) => splitCsvLine(ln, sep).length);
+      // a consistência é quantas linhas têm o mesmo número de colunas (maior frequência)
+      const freqMap: Record<number, number> = {};
+      counts.forEach((c) => (freqMap[c] = (freqMap[c] || 0) + 1));
+      let modeCount = 0;
+      let modeFreq = 0;
+      for (const k in freqMap) {
+        const num = Number(k);
+        if (freqMap[num] > modeFreq) {
+          modeFreq = freqMap[num];
+          modeCount = num;
+        }
+      }
+      // score: quanto maior a frequência relativa do modo e quanto maior o número de colunas, melhor
+      const score = modeFreq / counts.length + modeCount / 100;
+      if (score > bestScore) {
+        bestScore = score;
+        bestSep = sep;
+      }
+    } catch (e) {
+      // ignore
+    }
+  });
+
+  return bestSep;
+}
+
 // parser de CSV com suporte a aspas e normalização de header
 function parseCsv(text: string): Array<Record<string, string>> {
   if (!text || !text.trim()) return [];
@@ -128,17 +169,11 @@ function parseCsv(text: string): Array<Record<string, string>> {
   // trata BOM no começo do arquivo
   lines[0] = lines[0].replace(/^\uFEFF/, "");
 
-  const firstLine = lines[0];
-
-  // detecta separador: ; | tab | ,
-  const sep = firstLine.includes(";")
-    ? ";"
-    : firstLine.includes("\t")
-    ? "\t"
-    : ",";
+  // detecta separador de forma robusta
+  const sep = detectSeparator(text, [",", ";", "\t", "|"]);
 
   // normaliza header: lower, espaços -> _, remove aspas externas
-  const rawHeaders = splitCsvLine(firstLine, sep);
+  const rawHeaders = splitCsvLine(lines[0], sep);
   const header = rawHeaders.map((h) =>
     h
       .trim()
