@@ -113,30 +113,48 @@ function splitCsvLine(line: string, sep: string): string[] {
   return out;
 }
 
-// parser de CSV com suporte a aspas
+// parser de CSV com suporte a aspas e normalização de header
 function parseCsv(text: string): Array<Record<string, string>> {
-  if (!text.trim()) return [];
+  if (!text || !text.trim()) return [];
 
+  // normaliza quebras de linha e remove linhas vazias
   const lines = text
-    .split(/\r?\n/)
+    .replace(/\r\n/g, "\n")
+    .split("\n")
     .filter((l) => l.trim().length > 0);
 
   if (!lines.length) return [];
 
-  const firstLine = lines[0];
-  const sep = firstLine.includes(";") ? ";" : ",";
+  // trata BOM no começo do arquivo
+  lines[0] = lines[0].replace(/^\uFEFF/, "");
 
-  const header = splitCsvLine(firstLine, sep).map((h) => h.trim());
+  const firstLine = lines[0];
+
+  // detecta separador: ; | tab | ,
+  const sep = firstLine.includes(";")
+    ? ";"
+    : firstLine.includes("\t")
+    ? "\t"
+    : ",";
+
+  // normaliza header: lower, espaços -> _, remove aspas externas
+  const rawHeaders = splitCsvLine(firstLine, sep);
+  const header = rawHeaders.map((h) =>
+    h
+      .trim()
+      .replace(/^"(.*)"$/, "$1")
+      .replace(/^\uFEFF/, "")
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+  );
+
   const dataLines = lines.slice(1);
 
   const rows = dataLines.map((raw) => {
     const cols = splitCsvLine(raw, sep).map((c) => {
-      let v = c.trim();
-      // remove aspas externas, se tiver
-      if (v.startsWith('"') && v.endsWith('"') && v.length >= 2) {
-        v = v.slice(1, -1);
-      }
-      return v;
+      let v = c;
+      v = v.replace(/^"(.*)"$/, "$1");
+      return v.trim();
     });
 
     const obj: Record<string, string> = {};
@@ -147,6 +165,17 @@ function parseCsv(text: string): Array<Record<string, string>> {
   });
 
   return rows;
+}
+
+// quebra campos tipo photo_url ou categories em array
+function toArray(v: string): string[] {
+  if (!v || !v.toString().trim()) return [];
+  // aceita separadores: vírgula, ponto-e-vírgula, pipe
+  return v
+    .toString()
+    .split(/[,;|]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -168,7 +197,7 @@ function parseCsv(text: string): Array<Record<string, string>> {
     reader.readAsText(file, "utf-8");
   }
 
-  function toArray(v: string): string[] {
+  function toArrayLegacy(v: string): string[] {
     return v
       .split(",")
       .map((s) => s.trim())
@@ -237,11 +266,14 @@ function parseCsv(text: string): Array<Record<string, string>> {
           sizeStocksArray.push(Number.isFinite(num) ? num : 0);
         }
 
+        // photo array e capa (image_url) = primeira foto
+        const photoArr = toArray(photoStr);
+
         return {
           name: (r["name"] || "").toString().trim() || null,
           bio: (r["bio"] || "").toString().trim() || null,
           price_tag: (r["price_tag"] || "").toString().trim() || null,
-          photo_url: toArray(photoStr),
+          photo_url: photoArr,
           sizes: sizesArray,
           size_stocks: sizeStocksArray,
           category: mainCat || null,
@@ -255,7 +287,7 @@ function parseCsv(text: string): Array<Record<string, string>> {
           featured: false,
           code: null,
           slug: null,
-          image_url: null,
+          image_url: photoArr.length > 0 ? photoArr[0] : null,
           price_cents: null,
           store_id: storeId ?? null,
         };
