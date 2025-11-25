@@ -490,6 +490,24 @@ function DevHomeInner() {
           </div>
         </Card>
 
+        {/* GESTÃO DE ENTREGADORES */}
+<Card>
+  <h2 className="text-[20px] font-semibold text-black">Entregadores</h2>
+  <p className="mt-1 text-sm text-neutral-600 leading-relaxed">
+    Veja quem se cadastrou, aprove ou rejeite motoristas e gerencie suspensões.
+  </p>
+
+  <div className="mt-7">
+    <button
+      onClick={() => router.push('/developer/entregadores')}
+      className="inline-flex h-11 items-center justify-center rounded-full bg-black px-6 text-sm font-medium text-white shadow-md hover:opacity-90 active:scale-[0.98] transition"
+    >
+      Gerenciar entregadores
+    </button>
+  </div>
+</Card>
+
+
         {/* GERENCIAR BANNERS (apenas CTA) */}
         <Card className="md:col-span-2">
           <h2 className="text-[20px] font-semibold text-black">Gerenciar Home (Banners)</h2>
