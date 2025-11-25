@@ -197,13 +197,6 @@ function toArray(v: string): string[] {
     reader.readAsText(file, "utf-8");
   }
 
-  function toArrayLegacy(v: string): string[] {
-    return v
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }
-
   async function handleImport() {
     if (!fileContent.trim()) {
       setNotice("Selecione um arquivo CSV antes.");
