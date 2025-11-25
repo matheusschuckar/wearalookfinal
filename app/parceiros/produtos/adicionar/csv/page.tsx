@@ -146,7 +146,7 @@ function detectSeparator(text: string, candidates = [",", ";", "\t", "|"]): stri
         bestScore = score;
         bestSep = sep;
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
   });
