@@ -102,7 +102,6 @@ export default function PartnerProductImportCsvPage() {
     for (let i = 0; i < text.length; i++) {
       const ch = text[i];
       if (ch === '"') {
-        // se for aspas duplas escapadas, pular
         const next = text[i + 1];
         if (next === '"') {
           i++; // pula a aspa escapada
@@ -110,16 +109,12 @@ export default function PartnerProductImportCsvPage() {
           inQuotes = !inQuotes;
         }
       } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
-        // achou possível fim de header — pular possíveis \r\n
         headerEndIdx = i;
-        // skip combined \r\n by leaving headerEndIdx at first char; break
         break;
       }
     }
 
-    // Se não encontrou um newline fora de aspas, fallback: tratar tudo como uma linha (inválido mas evita crash)
     if (headerEndIdx === -1) {
-      // fallback simples: split por qualquer newline
       const quickLines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(Boolean);
       if (!quickLines.length) return [];
       const headerRow = quickLines[0];
@@ -129,17 +124,14 @@ export default function PartnerProductImportCsvPage() {
       return mapRows(header, data);
     }
 
-    // extrair header raw (até headerEndIdx) e resto do texto começa depois do primeiro newline (considerar \r\n)
     const headerRaw = text.slice(0, headerEndIdx);
     let restStart = headerEndIdx;
-    // pular todos os \r and \n que seguem
     while (restStart < text.length && (text[restStart] === '\r' || text[restStart] === '\n')) restStart++;
     const bodyRaw = text.slice(restStart);
 
     const sep = detectSeparatorFromHeader(headerRaw);
     const header = splitRespectingQuotes(headerRaw, sep).map(h => normalizeHeader(h));
 
-    // Agora vamos parsear o body char a char em linhas respeitando aspas
     const rows: string[][] = [];
     let curCell = "";
     let curRow: string[] = [];
@@ -151,7 +143,6 @@ export default function PartnerProductImportCsvPage() {
       if (ch === '"') {
         const next = bodyRaw[i + 1];
         if (next === '"') {
-          // aspa escapada -> add uma aspa e pular
           curCell += '"';
           i++;
         } else {
@@ -161,11 +152,8 @@ export default function PartnerProductImportCsvPage() {
         curRow.push(curCell);
         curCell = "";
       } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
-        // fim de linha — completar a célula atual e a row
         curRow.push(curCell);
         curCell = "";
-        // pular qualquer sequência combinada de \r\n
-        // avançar i se o próximo caractere é o outro tipo de newline
         if (ch === '\r' && bodyRaw[i + 1] === '\n') {
           i++;
         } else if (ch === '\n' && bodyRaw[i + 1] === '\r') {
@@ -177,9 +165,8 @@ export default function PartnerProductImportCsvPage() {
         curCell += ch;
       }
     }
-    // final do arquivo: se algo pendente, adicionar
+
     if (inQuotes) {
-      // arquivo terminou dentro de aspas (mal formado) — tenta fechar
       curRow.push(curCell);
       rows.push(curRow);
     } else {
@@ -189,17 +176,14 @@ export default function PartnerProductImportCsvPage() {
       }
     }
 
-    // mapear rows (arrays) para objetos usando o header (preencher com "" quando faltar)
     return mapRows(header, rows);
   }
 
-  // Helper: detecta separador a partir do header (não entra em quotes aqui, header normalmente não tem \n)
   function detectSeparatorFromHeader(headerRaw: string): string {
     const candidates = [",", ";", "\t", "|"];
     let best = ",";
     let bestCount = -1;
     for (const c of candidates) {
-      // contar ocorrências simples no header
       const cnt = headerRaw.split(c).length - 1;
       if (cnt > bestCount) {
         bestCount = cnt;
@@ -209,7 +193,6 @@ export default function PartnerProductImportCsvPage() {
     return best;
   }
 
-  // Helper: faz split de uma linha respeitando aspas (usado para header)
   function splitRespectingQuotes(line: string, sep: string): string[] {
     const res: string[] = [];
     let cur = "";
@@ -259,7 +242,6 @@ export default function PartnerProductImportCsvPage() {
   // quebra campos tipo photo_url ou categories em array
   function toArray(v: string): string[] {
     if (!v || !v.toString().trim()) return [];
-    // aceita separadores: vírgula, ponto-e-vírgula, pipe
     return v
       .toString()
       .split(/[,;|]/)
@@ -566,23 +548,48 @@ export default function PartnerProductImportCsvPage() {
                       <th className="px-3 py-2">gender</th>
                       <th className="px-3 py-2">sizes</th>
                       <th className="px-3 py-2">size_stocks</th>
+                      <th className="px-3 py-2">photo_url</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {rowsPreview.map((r, idx) => (
-                      <tr
-                        key={idx}
-                        className="odd:bg-white/0 even:bg-white/30"
-                      >
-                        <td className="px-3 py-2">{r["name"]}</td>
-                        <td className="px-3 py-2">{r["price_tag"]}</td>
-                        <td className="px-3 py-2">{r["category"]}</td>
-                        <td className="px-3 py-2">{r["categories"]}</td>
-                        <td className="px-3 py-2">{r["gender"]}</td>
-                        <td className="px-3 py-2">{r["sizes"]}</td>
-                        <td className="px-3 py-2">{r["size_stocks"]}</td>
-                      </tr>
-                    ))}
+                    {rowsPreview.map((r, idx) => {
+                      const firstPhoto = (r["photo_url"] || "")
+                        .toString()
+                        .split(/[,;|]/)
+                        .map((s) => s.trim())
+                        .filter(Boolean)[0];
+                      return (
+                        <tr key={idx} className="odd:bg-white/0 even:bg-white/30">
+                          <td className="px-3 py-2">{r["name"]}</td>
+                          <td className="px-3 py-2">{r["price_tag"]}</td>
+                          <td className="px-3 py-2">{r["category"]}</td>
+                          <td className="px-3 py-2">{r["categories"]}</td>
+                          <td className="px-3 py-2">{r["gender"]}</td>
+                          <td className="px-3 py-2">{r["sizes"]}</td>
+                          <td className="px-3 py-2">{r["size_stocks"]}</td>
+                          <td className="px-3 py-2">
+                            {firstPhoto ? (
+                              <div className="flex items-center gap-2">
+                                <img
+                                  src={firstPhoto}
+                                  alt="thumb"
+                                  className="h-12 w-12 object-cover rounded"
+                                  onError={(e) => {
+                                    // evitar erro visual se url inválida
+                                    (e.target as HTMLImageElement).style.display = "none";
+                                  }}
+                                />
+                                <span className="text-[11px] break-all max-w-[36ch]">
+                                  {firstPhoto}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-neutral-400 text-[11px]">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
