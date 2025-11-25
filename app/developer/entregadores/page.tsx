@@ -4,11 +4,31 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 
+type Driver = {
+  id: string;
+  user_id?: string;
+  full_name?: string | null;
+  cpf?: string | null;
+  plate?: string | null;
+  city?: string | null;
+  state?: string | null;
+  status?: 'pending' | 'approved' | 'rejected' | 'suspended' | 'banned' | string | null;
+  created_at?: string | null;
+  whatsapp?: string | null;
+  street?: string | null;
+  number?: string | null;
+  bairro?: string | null;
+  cep?: string | null;
+  vehicle_type?: string | null;
+  suspension_until?: string | null;
+  rejection_reason?: string | null;
+};
+
 export default function EntregadoresPage() {
   const router = useRouter();
 
-  const [loading, setLoading] = useState(true);
-  const [drivers, setDrivers] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
 
   const SURFACE = '#F7F4EF';
   const BORDER = '#E5E0DA';
@@ -32,7 +52,7 @@ export default function EntregadoresPage() {
         console.error(error);
         setDrivers([]);
       } else {
-        setDrivers(data || []);
+        setDrivers((data as Driver[] | null) || []);
       }
 
       setLoading(false);
@@ -43,14 +63,14 @@ export default function EntregadoresPage() {
   }, []);
 
   // ---------------- HELPERS ----------------
-  function maskCPF(cpf: string | null) {
+  function maskCPF(cpf: string | null | undefined) {
     if (!cpf) return '-';
     const c = cpf.replace(/\D/g, '');
     if (c.length !== 11) return cpf;
     return `${c.slice(0,3)}.${c.slice(3,6)}.${c.slice(6,9)}-${c.slice(9,11)}`;
   }
 
-  function StatusPill({ status }: { status: string }) {
+  function StatusPill({ status }: { status: string | undefined | null }) {
     const base =
       'px-3 py-1 rounded-full text-xs font-medium border inline-flex items-center justify-center';
 
@@ -62,20 +82,23 @@ export default function EntregadoresPage() {
       banned: 'bg-red-900 border-red-900 text-white'
     };
 
+    const s = status ?? 'pending';
+
     return (
-      <span className={`${base} ${map[status] || 'bg-neutral-100 border-neutral-300 text-neutral-700'}`}>
-        {status}
+      <span className={`${base} ${map[s] || 'bg-neutral-100 border-neutral-300 text-neutral-700'}`}>
+        {s}
       </span>
     );
   }
 
-  function Card({ children }: { children: React.ReactNode }) {
+  function Card(props: { children: React.ReactNode; onClick?: () => void }) {
     return (
       <div
+        onClick={props.onClick}
         className="rounded-3xl p-6 shadow-[0_10px_30px_-18px_rgba(0,0,0,0.18)] hover:shadow-[0_10px_40px_-16px_rgba(0,0,0,0.22)] cursor-pointer transition"
         style={{ backgroundColor: 'rgba(255,255,255,0.55)', border: `1px solid ${BORDER}`, backdropFilter: 'blur(6px)' }}
       >
-        {children}
+        {props.children}
       </div>
     );
   }
@@ -120,7 +143,7 @@ export default function EntregadoresPage() {
           <p className="text-neutral-600">Nenhum entregador encontrado.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {drivers.map((d) => (
+            {drivers.map((d: Driver) => (
               <Card key={d.id} onClick={() => router.push(`/developer/entregadores/${d.id}`)}>
                 <div className="flex items-center justify-between">
                   <div>
@@ -133,7 +156,7 @@ export default function EntregadoresPage() {
                     </p>
                   </div>
 
-                  <StatusPill status={d.status ?? 'pending'} />
+                  <StatusPill status={d.status} />
                 </div>
               </Card>
             ))}
