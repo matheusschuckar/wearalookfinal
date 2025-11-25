@@ -169,6 +169,9 @@ export default function EntregadorSlugPage() {
   const selfie = getDoc('SELFIE');
   const proof = getDoc('ADDRESS_PROOF');
 
+  // status atual
+  const status = driver.status ?? 'pending';
+
   return (
     <main className="min-h-screen" style={{ backgroundColor: SURFACE }}>
       {/* Topbar */}
@@ -278,37 +281,61 @@ export default function EntregadorSlugPage() {
           <h2 className="text-lg font-semibold text-black mb-6">Ações</h2>
 
           <div className="flex flex-wrap gap-3">
-            {/* APROVAR */}
-            <button
-              onClick={() => updateStatus('approved')}
-              className="h-11 px-6 rounded-full bg-black text-white text-sm font-medium hover:opacity-90"
-            >
-              Aprovar
-            </button>
+            {/* APROVAR - só quando estiver pending */}
+            {status === 'pending' && (
+              <button
+                onClick={() => updateStatus('approved')}
+                className="h-11 px-6 rounded-full bg-black text-white text-sm font-medium hover:opacity-90"
+              >
+                Aprovar
+              </button>
+            )}
 
-            {/* REJEITAR */}
-            <button
-              onClick={() => setRejectionModal(true)}
-              className="h-11 px-6 rounded-full bg-red-600 text-white text-sm font-medium hover:bg-red-700"
-            >
-              Rejeitar
-            </button>
+            {/* REJEITAR - disponível enquanto pending */}
+            {status === 'pending' && (
+              <button
+                onClick={() => setRejectionModal(true)}
+                className="h-11 px-6 rounded-full bg-red-600 text-white text-sm font-medium hover:bg-red-700"
+              >
+                Rejeitar
+              </button>
+            )}
 
-            {/* SUSPENDER */}
-            <button
-              onClick={() => setSuspensionModal(true)}
-              className="h-11 px-6 rounded-full bg-orange-600 text-white text-sm font-medium hover:bg-orange-700"
-            >
-              Suspender
-            </button>
+            {/* SUSPENDER - só quando já aprovado */}
+            {status === 'approved' && (
+              <button
+                onClick={() => setSuspensionModal(true)}
+                className="h-11 px-6 rounded-full bg-orange-600 text-white text-sm font-medium hover:bg-orange-700"
+              >
+                Suspender
+              </button>
+            )}
 
-            {/* BANIR */}
-            <button
-              onClick={() => updateStatus('banned')}
-              className="h-11 px-6 rounded-full bg-red-900 text-white text-sm font-medium hover:bg-red-800"
-            >
-              Banir permanentemente
-            </button>
+            {/* BANIR - só quando já aprovado */}
+            {status === 'approved' && (
+              <button
+                onClick={() => {
+                  if (!confirm('Tem certeza que quer banir permanentemente este entregador?')) return;
+                  updateStatus('banned');
+                }}
+                className="h-11 px-6 rounded-full bg-red-900 text-white text-sm font-medium hover:bg-red-800"
+              >
+                Banir permanentemente
+              </button>
+            )}
+
+            {/* se já for banned, permitir apenas ver e (opcional) reverter? */}
+            {status === 'banned' && (
+              <button
+                onClick={() => {
+                  if (!confirm('Reverter banimento e colocar como rejected?')) return;
+                  updateStatus('rejected');
+                }}
+                className="h-11 px-6 rounded-full border border-neutral-300 text-sm font-medium"
+              >
+                Reverter ban (marcar rejected)
+              </button>
+            )}
           </div>
         </Card>
 
