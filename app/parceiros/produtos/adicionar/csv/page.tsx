@@ -84,135 +84,190 @@ export default function PartnerProductImportCsvPage() {
     })();
   }, [router]);
 
- // helper: divide uma linha de CSV respeitando aspas
-function splitCsvLine(line: string, sep: string): string[] {
-  const out: string[] = [];
-  let current = "";
-  let inQuotes = false;
+  // ---------- PARSER ROBUSTO (substitui split+detect simples) ----------
 
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
+  // Divide um texto CSV em linhas/células respeitando aspas e quebras internas
+  function parseCsv(text: string): Array<Record<string, string>> {
+    if (!text || !text.toString().trim()) return [];
 
-    if (ch === '"') {
-      // trata aspas duplas escapadas ("")
-      const next = line[i + 1];
-      if (next === '"') {
-        current += '"';
-        i++; // pula a segunda aspa
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (ch === sep && !inQuotes) {
-      out.push(current);
-      current = "";
-    } else {
-      current += ch;
+    // Remove BOM inicial se houver
+    if (text.charCodeAt(0) === 0xfeff) {
+      text = text.slice(1);
     }
-  }
-  out.push(current);
-  return out;
-}
 
-// detecta separador testando candidatos e escolhendo o que produz colunas consistentes
-function detectSeparator(text: string, candidates = [",", ";", "\t", "|"]): string {
-  // pega primeiras N linhas úteis
-  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter((l) => l.trim().length > 0);
-  if (!lines.length) return ",";
-
-  const sampleCount = Math.min(20, Math.max(2, lines.length));
-  const sample = lines.slice(0, sampleCount);
-
-  let bestSep = ",";
-  let bestScore = -1;
-
-  candidates.forEach((sep) => {
-    try {
-      const counts = sample.map((ln) => splitCsvLine(ln, sep).length);
-      // a consistência é quantas linhas têm o mesmo número de colunas (maior frequência)
-      const freqMap: Record<number, number> = {};
-      counts.forEach((c) => (freqMap[c] = (freqMap[c] || 0) + 1));
-      let modeCount = 0;
-      let modeFreq = 0;
-      for (const k in freqMap) {
-        const num = Number(k);
-        if (freqMap[num] > modeFreq) {
-          modeFreq = freqMap[num];
-          modeCount = num;
+    // Não "splitar" por \n imediatamente — precisamos achar o fim do header que NÃO esteja dentro de aspas.
+    // Encontrar índice do fim do header (primeiro newline que não esteja dentro de aspas)
+    let inQuotes = false;
+    let headerEndIdx = -1;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (ch === '"') {
+        // se for aspas duplas escapadas, pular
+        const next = text[i + 1];
+        if (next === '"') {
+          i++; // pula a aspa escapada
+        } else {
+          inQuotes = !inQuotes;
         }
+      } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+        // achou possível fim de header — pular possíveis \r\n
+        headerEndIdx = i;
+        // skip combined \r\n by leaving headerEndIdx at first char; break
+        break;
       }
-      // score: quanto maior a frequência relativa do modo e quanto maior o número de colunas, melhor
-      const score = modeFreq / counts.length + modeCount / 100;
-      if (score > bestScore) {
-        bestScore = score;
-        bestSep = sep;
-      }
-    } catch {
-      // ignore
     }
-  });
 
-  return bestSep;
-}
+    // Se não encontrou um newline fora de aspas, fallback: tratar tudo como uma linha (inválido mas evita crash)
+    if (headerEndIdx === -1) {
+      // fallback simples: split por qualquer newline
+      const quickLines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(Boolean);
+      if (!quickLines.length) return [];
+      const headerRow = quickLines[0];
+      const sep = detectSeparatorFromHeader(headerRow);
+      const header = splitRespectingQuotes(headerRow, sep).map(h => normalizeHeader(h));
+      const data = quickLines.slice(1).map(l => splitRespectingQuotes(l, sep));
+      return mapRows(header, data);
+    }
 
-// parser de CSV com suporte a aspas e normalização de header
-function parseCsv(text: string): Array<Record<string, string>> {
-  if (!text || !text.trim()) return [];
+    // extrair header raw (até headerEndIdx) e resto do texto começa depois do primeiro newline (considerar \r\n)
+    const headerRaw = text.slice(0, headerEndIdx);
+    let restStart = headerEndIdx;
+    // pular todos os \r and \n que seguem
+    while (restStart < text.length && (text[restStart] === '\r' || text[restStart] === '\n')) restStart++;
+    const bodyRaw = text.slice(restStart);
 
-  // normaliza quebras de linha e remove linhas vazias
-  const lines = text
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
-    .split("\n")
-    .filter((l) => l.trim().length > 0);
+    const sep = detectSeparatorFromHeader(headerRaw);
+    const header = splitRespectingQuotes(headerRaw, sep).map(h => normalizeHeader(h));
 
-  if (!lines.length) return [];
+    // Agora vamos parsear o body char a char em linhas respeitando aspas
+    const rows: string[][] = [];
+    let curCell = "";
+    let curRow: string[] = [];
+    inQuotes = false;
 
-  // trata BOM no começo do arquivo
-  lines[0] = lines[0].replace(/^\uFEFF/, "");
+    for (let i = 0; i < bodyRaw.length; i++) {
+      const ch = bodyRaw[i];
 
-  // detecta separador de forma robusta
-  const sep = detectSeparator(text, [",", ";", "\t", "|"]);
+      if (ch === '"') {
+        const next = bodyRaw[i + 1];
+        if (next === '"') {
+          // aspa escapada -> add uma aspa e pular
+          curCell += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === sep && !inQuotes) {
+        curRow.push(curCell);
+        curCell = "";
+      } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+        // fim de linha — completar a célula atual e a row
+        curRow.push(curCell);
+        curCell = "";
+        // pular qualquer sequência combinada de \r\n
+        // avançar i se o próximo caractere é o outro tipo de newline
+        if (ch === '\r' && bodyRaw[i + 1] === '\n') {
+          i++;
+        } else if (ch === '\n' && bodyRaw[i + 1] === '\r') {
+          i++;
+        }
+        rows.push(curRow);
+        curRow = [];
+      } else {
+        curCell += ch;
+      }
+    }
+    // final do arquivo: se algo pendente, adicionar
+    if (inQuotes) {
+      // arquivo terminou dentro de aspas (mal formado) — tenta fechar
+      curRow.push(curCell);
+      rows.push(curRow);
+    } else {
+      if (curCell !== "" || curRow.length > 0) {
+        curRow.push(curCell);
+        rows.push(curRow);
+      }
+    }
 
-  // normaliza header: lower, espaços -> _, remove aspas externas
-  const rawHeaders = splitCsvLine(lines[0], sep);
-  const header = rawHeaders.map((h) =>
-    h
+    // mapear rows (arrays) para objetos usando o header (preencher com "" quando faltar)
+    return mapRows(header, rows);
+  }
+
+  // Helper: detecta separador a partir do header (não entra em quotes aqui, header normalmente não tem \n)
+  function detectSeparatorFromHeader(headerRaw: string): string {
+    const candidates = [",", ";", "\t", "|"];
+    let best = ",";
+    let bestCount = -1;
+    for (const c of candidates) {
+      // contar ocorrências simples no header
+      const cnt = headerRaw.split(c).length - 1;
+      if (cnt > bestCount) {
+        bestCount = cnt;
+        best = c;
+      }
+    }
+    return best;
+  }
+
+  // Helper: faz split de uma linha respeitando aspas (usado para header)
+  function splitRespectingQuotes(line: string, sep: string): string[] {
+    const res: string[] = [];
+    let cur = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        const next = line[i + 1];
+        if (next === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === sep && !inQuotes) {
+        res.push(cur);
+        cur = "";
+      } else {
+        cur += ch;
+      }
+    }
+    res.push(cur);
+    return res.map(s => s.replace(/^"(.*)"$/,'$1').trim());
+  }
+
+  function normalizeHeader(h: string): string {
+    return h
       .trim()
       .replace(/^"(.*)"$/, "$1")
       .replace(/^\uFEFF/, "")
       .toLowerCase()
-      .replace(/\s+/g, "_")
-  );
+      .replace(/\s+/g, "_");
+  }
 
-  const dataLines = lines.slice(1);
+  function mapRows(header: string[], rowsArr: string[][]): Array<Record<string, string>> {
+    const out: Array<Record<string, string>> = [];
+    for (const r of rowsArr) {
+      const obj: Record<string, string> = {};
+      for (let i = 0; i < header.length; i++) {
+        obj[header[i]] = (r[i] ?? "").toString().trim();
+      }
+      out.push(obj);
+    }
+    return out;
+  }
 
-  const rows = dataLines.map((raw) => {
-    const cols = splitCsvLine(raw, sep).map((c) => {
-      let v = c;
-      v = v.replace(/^"(.*)"$/, "$1");
-      return v.trim();
-    });
+  // quebra campos tipo photo_url ou categories em array
+  function toArray(v: string): string[] {
+    if (!v || !v.toString().trim()) return [];
+    // aceita separadores: vírgula, ponto-e-vírgula, pipe
+    return v
+      .toString()
+      .split(/[,;|]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
 
-    const obj: Record<string, string> = {};
-    header.forEach((key, idx) => {
-      obj[key] = cols[idx] ?? "";
-    });
-    return obj;
-  });
-
-  return rows;
-}
-
-// quebra campos tipo photo_url ou categories em array
-function toArray(v: string): string[] {
-  if (!v || !v.toString().trim()) return [];
-  // aceita separadores: vírgula, ponto-e-vírgula, pipe
-  return v
-    .toString()
-    .split(/[,;|]/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
+  // ---------- fim parser ----------
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
