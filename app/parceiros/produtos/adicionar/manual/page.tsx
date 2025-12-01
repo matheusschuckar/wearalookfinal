@@ -9,6 +9,7 @@ const SURFACE = "#F7F4EF";
 type StoreRow = {
   id: number;
   name: string;
+  slug?: string | null;
 };
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ export default function PartnerProductCreateManualPage() {
   const [loggedEmail, setLoggedEmail] = useState<string>("");
   const [storeName, setStoreName] = useState<string>("");
   const [storeId, setStoreId] = useState<number | null>(null);
+  const [storeSlug, setStoreSlug] = useState<string>(""); // novo
 
   const [name, setName] = useState<string>("");
   const [priceTag, setPriceTag] = useState<string>("");
@@ -30,6 +32,12 @@ export default function PartnerProductCreateManualPage() {
   const [category, setCategory] = useState<string>("");
   const [gender, setGender] = useState<string>("");
   const [categories, setCategories] = useState<string>("");
+
+  // NOVO: arquivos de imagem uploadados
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+
+  // NOVO: helper para mostrar previews locais (URLs de objeto)
+  const [localPreviewUrls, setLocalPreviewUrls] = useState<string[]>([]);
 
   // NOVO: tamanhos com estoque
   const [sizeEntries, setSizeEntries] = useState<
@@ -88,13 +96,28 @@ export default function PartnerProductCreateManualPage() {
         setStoreName(sName);
 
         if (sName) {
+          // agora buscamos também slug
           const { data: storeRow } = await supabase
             .from("stores")
-            .select("id,name")
+            .select("id,name,slug")
             .eq("name", sName)
             .maybeSingle<StoreRow>();
           if (storeRow?.id) {
             setStoreId(storeRow.id);
+          }
+          if (storeRow?.slug) {
+            setStoreSlug(storeRow.slug);
+          } else if (storeRow?.name) {
+            // fallback: slugify simples
+            setStoreSlug(
+              storeRow.name
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase()
+                .replace(/&/g, "e")
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/(^-|-$)+/g, "")
+            );
           }
         }
       } catch (err) {
@@ -110,13 +133,11 @@ export default function PartnerProductCreateManualPage() {
   useEffect(() => {
     (async () => {
       try {
-        const { data, error } = await supabase
-          .from("products")
-          .select("category");
+        const { data, error } = await supabase.from("products").select("category");
         if (error) throw error;
 
         const all = (data || [])
-          .map((r) => (r.category ? r.category.trim() : ""))
+          .map((r: any) => (r.category ? r.category.trim() : ""))
           .filter(Boolean);
 
         const uniq = Array.from(new Set(all)).sort((a, b) =>
@@ -154,6 +175,58 @@ export default function PartnerProductCreateManualPage() {
     setNewSize("");
   }
 
+  // ============ Upload helpers (inspirado em PersonalizarLojaPage) ============
+  // upload single file to bucket store_images, path users/<uid>/<storeSlug>/<prefix>-<timestamp>.<ext>
+  async function uploadFileToStoreImages(file: File, storeSlugLocal: string, prefix: string): Promise<string> {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth?.user?.id;
+    if (!uid) throw new Error("não autenticado");
+
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const key = `users/${uid}/${storeSlugLocal}/${prefix}-${Date.now()}.${ext}`;
+
+    const { error } = await supabase.storage
+      .from("store_images")
+      .upload(key, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type || "image/jpeg",
+      });
+
+    if (error) throw error;
+
+    const { data } = supabase.storage.from("store_images").getPublicUrl(key);
+    return data.publicUrl;
+  }
+
+  // upload array of files, return array of public urls
+  async function uploadFilesToStoreImages(files: File[], storeSlugLocal: string, prefixBase = "product"): Promise<string[]> {
+    const out: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      try {
+        const url = await uploadFileToStoreImages(f, storeSlugLocal, `${prefixBase}-${i}`);
+        out.push(url);
+      } catch (e) {
+        console.error("Erro ao subir arquivo:", e);
+        // continuar com os demais (não interromper tudo)
+      }
+    }
+    return out;
+  }
+
+  // quando photoFiles muda, gerar previews locais
+  useEffect(() => {
+    // limpar antigos
+    localPreviewUrls.forEach((u) => URL.revokeObjectURL(u));
+    const urls = photoFiles.map((f) => URL.createObjectURL(f));
+    setLocalPreviewUrls(urls);
+    return () => {
+      urls.forEach((u) => URL.revokeObjectURL(u));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photoFiles]);
+
   // salvar
   async function handleSave() {
     if (!storeName) {
@@ -186,10 +259,21 @@ export default function PartnerProductCreateManualPage() {
         return Number.isFinite(n) ? n : 0;
       });
 
+      // se houver arquivos, faz upload e usa os urls
+      let finalPhotoUrls: string[] = toArray(photoUrl);
+      if (photoFiles.length > 0) {
+        // usa storeSlug (já definido no carregamento)
+        const slugForUpload = storeSlug || storeName;
+        const uploaded = await uploadFilesToStoreImages(photoFiles, slugForUpload, "product");
+        if (uploaded.length) {
+          finalPhotoUrls = uploaded;
+        }
+      }
+
       const insertPayload: Record<string, unknown> = {
         name: toStr(name) || null,
         price_tag: toStr(priceTag) || null,
-        photo_url: toArray(photoUrl),
+        photo_url: finalPhotoUrls,
         sizes: sizesArray,
         size_stocks: sizeStocksArray,
         category: primaryCategory || null,
@@ -203,7 +287,7 @@ export default function PartnerProductCreateManualPage() {
         featured: false,
         code: null,
         slug: null,
-        image_url: null,
+        image_url: finalPhotoUrls[0] || null,
         price_cents: null,
         store_id: storeId ?? null,
         bio: toStr(bio) || null,
@@ -240,7 +324,7 @@ export default function PartnerProductCreateManualPage() {
   }
 
   const photoUrls = toArray(photoUrl);
-  const firstPhoto = photoUrls[0] || "";
+  const firstPhoto = photoFiles.length ? localPreviewUrls[0] || "" : photoUrls[0] || "";
 
   const fieldRoot = "flex flex-col gap-1";
   const fieldLabel = "text-[11px] text-neutral-500 tracking-tight";
@@ -367,9 +451,7 @@ export default function PartnerProductCreateManualPage() {
                     height: 275,
                     borderRadius: 28,
                     backgroundColor: firstPhoto ? "transparent" : "#F1EAE3",
-                    backgroundImage: firstPhoto
-                      ? `url(${firstPhoto})`
-                      : undefined,
+                    backgroundImage: firstPhoto ? `url(${firstPhoto})` : undefined,
                     backgroundRepeat: "no-repeat",
                     backgroundSize: "contain",
                     backgroundPosition: "center",
@@ -382,7 +464,19 @@ export default function PartnerProductCreateManualPage() {
                   ) : null}
                 </div>
 
-                {photoUrls.length > 1 ? (
+                {/* previews adicionais: se houver uploads locais, mostra elas; senão, mostra URLs */}
+                {photoFiles.length > 1 ? (
+                  <div className="absolute bottom-3 right-3 flex gap-1">
+                    {localPreviewUrls.slice(1, 5).map((url, idx) => (
+                      <div
+                        key={idx}
+                        className="w-8 h-8 rounded-xl bg-[#F1EAE3] overflow-hidden border border-white/60 shadow-sm"
+                      >
+                        <img src={url} alt={`preview-${idx}`} className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                ) : photoUrls.length > 1 ? (
                   <div className="absolute bottom-3 right-3 flex gap-1">
                     {photoUrls.slice(1, 5).map((url, idx) => (
                       <div
@@ -651,10 +745,10 @@ export default function PartnerProductCreateManualPage() {
                   </p>
                 </div>
 
-                {/* urls */}
+                {/* urls + upload */}
                 <div className={fieldRoot}>
                   <label className={fieldLabel}>
-                    URLs de imagem (separe por vírgula)
+                    URLs de imagem (separe por vírgula) ou envie arquivos
                   </label>
                   <textarea
                     value={photoUrl}
@@ -662,9 +756,34 @@ export default function PartnerProductCreateManualPage() {
                     rows={2}
                     className={fieldTextarea}
                     placeholder="https://..., https://..."
+                    disabled={photoFiles.length > 0} // se houver uploads, desabilita edição de URLs para evitar conflito
                   />
+                  <div className="flex items-center gap-3 mt-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        setPhotoFiles(files);
+                      }}
+                      className="block text-sm"
+                    />
+                    {photoFiles.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPhotoFiles([]);
+                          setLocalPreviewUrls([]);
+                        }}
+                        className="text-sm text-neutral-500 hover:text-neutral-800"
+                      >
+                        limpar uploads
+                      </button>
+                    )}
+                  </div>
                   <p className="text-[10px] text-neutral-400 mt-[2px]">
-                    A primeira URL será usada como capa na listagem.
+                    A primeira imagem será usada como capa na listagem. Se você fizer upload de arquivos, eles terão prioridade sobre as URLs.
                   </p>
                 </div>
               </div>
