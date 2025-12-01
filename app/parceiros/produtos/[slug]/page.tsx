@@ -65,6 +65,20 @@ type Product = {
 
 export const dynamic = "force-dynamic";
 
+function slugify(s: string) {
+  const a = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return a
+    .toLowerCase()
+    .replace(/&/g, "e")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+}
+
+// Tipo local para gerenciar thumbs (remoto vs local)
+type ImgEntry =
+  | { id: string; src: string; kind: "remote" }
+  | { id: string; file: File; src: string; kind: "local" };
+
 export default function PartnerProductDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -82,11 +96,13 @@ export default function PartnerProductDetailPage() {
   const [slug, setSlug] = useState<string>("");
   const [name, setName] = useState<string>("");
   const [priceTag, setPriceTag] = useState<string>("");
-  const [photoUrl, setPhotoUrl] = useState<string>("");
   const [bio, setBio] = useState<string>("");
   const [category, setCategory] = useState<string>("");
   const [gender, setGender] = useState<string>("");
   const [categories, setCategories] = useState<string>("");
+
+  // imagem: mantemos um array de ImgEntry para controlar ordem/remoção/upload
+  const [images, setImages] = useState<ImgEntry[]>([]);
 
   // NOVO: lista de tamanhos com estoque
   const [sizeEntries, setSizeEntries] = useState<
@@ -111,6 +127,56 @@ export default function PartnerProductDetailPage() {
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
+  }
+
+  // Upload helpers: compatíveis com RLS (users/<uid>/...)
+  async function uploadFileToStoreImages(
+    file: File,
+    storeSlugLocal: string,
+    prefix: string
+  ): Promise<string> {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth?.user?.id;
+    if (!uid) throw new Error("não autenticado");
+
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const key = `users/${uid}/${storeSlugLocal}/${prefix}-${Date.now()}.${ext}`;
+
+    const { error } = await supabase.storage
+      .from("store_images")
+      .upload(key, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type || "image/jpeg",
+      });
+
+    if (error) throw error;
+
+    const { data } = supabase.storage.from("store_images").getPublicUrl(key);
+    return data.publicUrl;
+  }
+
+  async function uploadFilesToStoreImages(
+    files: File[],
+    storeSlugLocal: string,
+    prefixBase = "product"
+  ): Promise<string[]> {
+    const out: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      try {
+        const url = await uploadFileToStoreImages(
+          f,
+          storeSlugLocal,
+          `${prefixBase}-${i}`
+        );
+        out.push(url);
+      } catch (e) {
+        console.error("Erro ao subir arquivo:", e);
+        // continua com os demais
+      }
+    }
+    return out;
   }
 
   // auth
@@ -194,7 +260,6 @@ export default function PartnerProductDetailPage() {
         setSlug(prod.slug || "");
         setName(prod.name || "");
         setPriceTag(prod.price_tag != null ? prod.price_tag.toString() : "");
-        setPhotoUrl(toCommaString(prod.photo_url));
         setCategory(prod.category || "");
         setBio(prod.bio || "");
 
@@ -226,6 +291,19 @@ export default function PartnerProductDetailPage() {
           }
         }
         setSizeEntries(pairs);
+
+        // NOVO: inicializar imagens (remote)
+        const remoteUrls: string[] = Array.isArray(prod.photo_url)
+          ? prod.photo_url
+          : typeof prod.photo_url === "string" && prod.photo_url.trim()
+          ? prod.photo_url.split(",").map((s) => s.trim()).filter(Boolean)
+          : [];
+        const remoteEntries: ImgEntry[] = remoteUrls.map((u, i) => ({
+          id: `r-${i}-${btoa(u).slice(0, 6)}`,
+          src: u,
+          kind: "remote" as const,
+        }));
+        setImages(remoteEntries);
       } catch (err) {
         console.error(err);
         setNotice("Erro ao carregar produto.");
@@ -245,7 +323,9 @@ export default function PartnerProductDetailPage() {
         if (error) throw error;
 
         const all = (data || [])
-          .map((r) => (r.category ? r.category.trim() : ""))
+          .map((r: { category?: string | null }) =>
+            r.category ? r.category.trim() : ""
+          )
           .filter(Boolean);
 
         const uniq = Array.from(new Set(all)).sort((a, b) =>
@@ -287,6 +367,49 @@ export default function PartnerProductDetailPage() {
     setNewSize("");
   }
 
+  // ================ Imagens: handlers ================
+  // input file mudou -> adiciona entradas locais
+  function handleFilesSelected(files: FileList | null) {
+    if (!files) return;
+    const arr = Array.from(files);
+    const newEntries: ImgEntry[] = arr.map((f, i) => ({
+      id: `l-${Date.now()}-${i}-${f.name}`,
+      file: f,
+      src: URL.createObjectURL(f),
+      kind: "local" as const,
+    }));
+    setImages((old) => [...old, ...newEntries]);
+  }
+
+  // remover imagem (local: revokeObjectURL)
+  function handleRemoveImage(id: string) {
+    setImages((old) => {
+      const next = old.filter((it) => {
+        if (it.id === id && it.kind === "local") {
+          try {
+            URL.revokeObjectURL(it.src);
+          } catch (e) {}
+        }
+        return it.id !== id;
+      });
+      return next;
+    });
+  }
+
+  // mover imagem (dir: -1 left, +1 right)
+  function moveImage(id: string, dir: -1 | 1) {
+    setImages((old) => {
+      const idx = old.findIndex((it) => it.id === id);
+      if (idx === -1) return old;
+      const to = idx + dir;
+      if (to < 0 || to >= old.length) return old;
+      const copy = old.slice();
+      const [item] = copy.splice(idx, 1);
+      copy.splice(to, 0, item);
+      return copy;
+    });
+  }
+
   // salvar
   async function handleSave() {
     if (!productId) return;
@@ -307,13 +430,41 @@ export default function PartnerProductDetailPage() {
         return Number.isFinite(n) ? n : 0;
       });
 
+      // 1) se houver imagens locais, faz upload mantendo ordem
+      const localEntries = images.filter((it) => it.kind === "local") as {
+        id: string;
+        file: File;
+        src: string;
+        kind: "local";
+      }[];
+
+      let uploadedUrlsMap = new Map<string, string>(); // id -> uploaded url
+
+      if (localEntries.length > 0) {
+        const storeSlugLocal = slugify(storeName || String(productId || ""));
+        const files = localEntries.map((l) => l.file);
+        const uploaded = await uploadFilesToStoreImages(files, storeSlugLocal, "product");
+        // uploaded order matches localEntries order
+        for (let i = 0; i < localEntries.length; i++) {
+          if (uploaded[i]) uploadedUrlsMap.set(localEntries[i].id, uploaded[i]);
+        }
+      }
+
+      // 2) monta lista final de urls na ordem atual das imagens
+      const finalUrls: string[] = images
+        .map((it) =>
+          it.kind === "remote" ? it.src : uploadedUrlsMap.get(it.id) ?? null
+        )
+        .filter((u): u is string => !!u);
+
+      // 3) atualiza produto com os campos
       const { error } = await supabase
         .from("products")
         .update({
           name: toStr(name),
           slug: toStr(slug) || null,
           price_tag: priceNum,
-          photo_url: toArray(photoUrl),
+          photo_url: finalUrls,
           sizes: sizesArray,
           size_stocks: stocksArray,
           category: toStr(category) || null,
@@ -329,6 +480,13 @@ export default function PartnerProductDetailPage() {
         setNotice("Não foi possível salvar no Supabase.");
       } else {
         setNotice("Salvo com sucesso.");
+        // opcional: atualizar estado images para remote-only com as urls retornadas
+        const remoteEntries: ImgEntry[] = finalUrls.map((u, i) => ({
+          id: `r-${i}-${btoa(u).slice(0, 6)}`,
+          src: u,
+          kind: "remote" as const,
+        }));
+        setImages(remoteEntries);
       }
     } catch (err) {
       console.error(err);
@@ -338,8 +496,7 @@ export default function PartnerProductDetailPage() {
     }
   }
 
-  const photoUrls = toArray(photoUrl);
-  const firstPhoto = photoUrls[0] || "";
+  const firstPhoto = images.length ? images[0].src : "";
 
   const fieldRoot = "flex flex-col gap-1";
   const fieldLabel = "text-[11px] text-neutral-500 tracking-tight";
@@ -386,7 +543,7 @@ export default function PartnerProductDetailPage() {
               </span>
             </div>
             <div className="flex flex-col leading-tight">
-              <span className="text-sm font-semibold textBLACK">Look</span>
+              <span className="text-sm font-semibold text-black">Look</span>
               <span className="text-[11px] text-neutral-500">
                 Editar produto
               </span>
@@ -463,23 +620,15 @@ export default function PartnerProductDetailPage() {
                       ) : null}
                     </div>
 
-                    {photoUrls.length > 1 ? (
+                    {images.length > 1 ? (
                       <div className="absolute bottom-3 right-3 flex gap-1">
-                        {photoUrls.slice(1, 5).map((url, idx) => (
+                        {images.slice(1, 5).map((it, idx) => (
                           <div
-                            key={idx}
+                            key={it.id}
                             className="w-8 h-8 rounded-xl bg-[#F1EAE3] overflow-hidden border border-white/60 shadow-sm"
                           >
-                            <div
-                              style={{
-                                width: "100%",
-                                height: "100%",
-                                backgroundImage: `url(${url})`,
-                                backgroundSize: "cover",
-                                backgroundPosition: "center",
-                                backgroundRepeat: "no-repeat",
-                              }}
-                            />
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={it.src} alt={`thumb-${idx}`} className="w-full h-full object-cover" />
                           </div>
                         ))}
                       </div>
@@ -536,6 +685,78 @@ export default function PartnerProductDetailPage() {
                         className={fieldTextarea}
                         placeholder="Conte um pouco sobre o produto, materiais, caimento..."
                       />
+                    </div>
+
+                    {/* Previews + controle de imagens */}
+                    <div className={fieldRoot}>
+                      <label className={fieldLabel}>Imagens do produto</label>
+
+                      <div className="flex gap-2 items-center mb-2">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={(e) => handleFilesSelected(e.target.files)}
+                          className="block text-sm"
+                        />
+                        <div className="text-[11px] text-neutral-500">
+                          Faça upload direto do computador ou use as URLs abaixo.
+                        </div>
+                      </div>
+
+                      {/* lista de thumbs com ações */}
+                      <div className="flex gap-2 flex-wrap">
+                        {images.length === 0 ? (
+                          <div className="text-[11px] text-neutral-400 bg-white/60 border border-dashed border-neutral-200 rounded-2xl px-4 py-3">
+                            Nenhuma imagem adicionada.
+                          </div>
+                        ) : (
+                          images.map((it, idx) => (
+                            <div
+                              key={it.id}
+                              className="relative w-28 p-1 rounded-xl bg-white border border-neutral-200"
+                            >
+                              <div className="aspect-[4/5] bg-neutral-100 overflow-hidden rounded-lg">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={it.src} alt={`img-${idx}`} className="w-full h-full object-cover" />
+                              </div>
+
+                              <div className="mt-2 flex items-center justify-between gap-1">
+                                <div className="text-[11px] truncate mr-1">
+                                  {it.kind === "remote" ? "URL" : "Upload"}
+                                </div>
+                                <div className="flex gap-1">
+                                  <button
+                                    title="Mover para esquerda"
+                                    onClick={() => moveImage(it.id, -1)}
+                                    className="text-xs px-2 py-1 rounded-full border hover:bg-neutral-50"
+                                  >
+                                    ◀
+                                  </button>
+                                  <button
+                                    title="Mover para direita"
+                                    onClick={() => moveImage(it.id, 1)}
+                                    className="text-xs px-2 py-1 rounded-full border hover:bg-neutral-50"
+                                  >
+                                    ▶
+                                  </button>
+                                  <button
+                                    title="Remover"
+                                    onClick={() => handleRemoveImage(it.id)}
+                                    className="text-xs px-2 py-1 rounded-full border text-red-500 hover:bg-red-50"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      <p className="text-[10px] text-neutral-400 mt-[2px]">
+                        A ordem aqui define a ordem salva no produto. Capa = primeira imagem.
+                      </p>
                     </div>
 
                     {/* preço */}
@@ -735,23 +956,6 @@ export default function PartnerProductDetailPage() {
                         className={fieldInput}
                         placeholder="sapato, sapatilha..."
                       />
-                    </div>
-
-                    {/* urls */}
-                    <div className={fieldRoot}>
-                      <label className={fieldLabel}>
-                        URLs de imagem (separe por vírgula)
-                      </label>
-                      <textarea
-                        value={photoUrl}
-                        onChange={(e) => setPhotoUrl(e.target.value)}
-                        rows={2}
-                        className={fieldTextarea}
-                        placeholder="https://..., https://..."
-                      />
-                      <p className="text-[10px] text-neutral-400 mt-[2px]">
-                        A primeira URL será usada como capa na listagem.
-                      </p>
                     </div>
                   </div>
 
