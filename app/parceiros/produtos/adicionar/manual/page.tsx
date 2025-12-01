@@ -133,11 +133,14 @@ export default function PartnerProductCreateManualPage() {
   useEffect(() => {
     (async () => {
       try {
-        const { data, error } = await supabase.from("products").select("category");
+        type ProdCategoryRow = { category?: string | null };
+        const { data, error } = await supabase
+          .from("products")
+          .select<ProdCategoryRow>("category");
         if (error) throw error;
 
-        const all = (data || [])
-          .map((r: any) => (r.category ? r.category.trim() : ""))
+        const all = (data ?? [])
+          .map((r) => (r.category ? r.category.trim() : ""))
           .filter(Boolean);
 
         const uniq = Array.from(new Set(all)).sort((a, b) =>
