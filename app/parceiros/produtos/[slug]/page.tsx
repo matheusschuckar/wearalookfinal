@@ -388,7 +388,7 @@ export default function PartnerProductDetailPage() {
         if (it.id === id && it.kind === "local") {
           try {
             URL.revokeObjectURL(it.src);
-          } catch (e) {}
+          } catch {}
         }
         return it.id !== id;
       });
@@ -438,7 +438,7 @@ export default function PartnerProductDetailPage() {
         kind: "local";
       }[];
 
-      let uploadedUrlsMap = new Map<string, string>(); // id -> uploaded url
+const uploadedUrlsMap = new Map<string, string>(); // id -> uploaded url
 
       if (localEntries.length > 0) {
         const storeSlugLocal = slugify(storeName || String(productId || ""));
