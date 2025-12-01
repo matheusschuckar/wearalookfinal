@@ -16,6 +16,7 @@ type AirtableRecord = {
     ["Store Name"]?: string;
     ["Item Price"]?: number | string;
     ["Notes"]?: string;
+    ["CPF"]?: string; // adicionado CPF
   };
 };
 
@@ -193,14 +194,21 @@ export default function PartnerOrdersPage() {
   }, [router]);
 
   // =============== AIRTABLE ===============
-  async function fetchOrdersForStore(store: string): Promise<AirtableRecord[]> {
+  // escapador simples para evitar quebra quando storeName tem apóstrofo
+  function escapeAirtableString(input: string) {
+    return input.replace(/'/g, "''");
+  }
+
+  // Retorna null quando ocorrer erro (assim o caller não sobrescreve orders)
+  async function fetchOrdersForStore(store: string): Promise<AirtableRecord[] | null> {
     const API_KEY = process.env.NEXT_PUBLIC_AIRTABLE_API_KEY;
     const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID;
     const TABLE = process.env.NEXT_PUBLIC_AIRTABLE_TABLE_NAME || "Orders";
 
     if (!API_KEY || !BASE_ID || !store) return [];
 
-    const formula = encodeURIComponent(`{Store Name}='${store}'`);
+    const safeStore = escapeAirtableString(store);
+    const formula = encodeURIComponent(`{Store Name}='${safeStore}'`);
     const url = `https://api.airtable.com/v0/${BASE_ID}/${TABLE}?filterByFormula=${formula}&sort[0][field]=Created%20At&sort[0][direction]=desc&pageSize=100`;
 
     const all: AirtableRecord[] = [];
@@ -216,7 +224,8 @@ export default function PartnerOrdersPage() {
         });
         if (!res.ok) {
           console.error("[/parceiros/pedidos] airtable error:", await res.text());
-          break;
+          // em caso de erro, retornamos null para o caller evitar limpar a UI
+          return null;
         }
         const json: { records?: AirtableRecord[]; offset?: string } =
           await res.json();
@@ -225,6 +234,7 @@ export default function PartnerOrdersPage() {
       } while (offset);
     } catch (err) {
       console.error("[/parceiros/pedidos] airtable fetch failed:", err);
+      return null;
     }
 
     return all;
@@ -239,6 +249,12 @@ export default function PartnerOrdersPage() {
     const load = async () => {
       const data = await fetchOrdersForStore(storeName);
       if (cancelled) return;
+
+      // se houve erro no fetch, não sobrescreve os pedidos atuais (evita sumir tudo)
+      if (data === null) {
+        setNotice("Falha ao atualizar pedidos. Verifique a conexão.");
+        return;
+      }
 
       // pedido novo
       const newest = data[0];
@@ -275,6 +291,7 @@ export default function PartnerOrdersPage() {
       prevStatusesRef.current = nextMap;
 
       setOrders(data);
+      setNotice(null);
     };
 
     load();
@@ -480,6 +497,7 @@ export default function PartnerOrdersPage() {
                   <th className="py-3 px-3 whitespace-nowrap">Criado em</th>
                   <th className="py-3 px-3 whitespace-nowrap">Status</th>
                   <th className="py-3 px-3 whitespace-nowrap">Loja</th>
+                  <th className="py-3 px-3 whitespace-nowrap">CPF</th> {/* coluna CPF */}
                   <th className="py-3 px-3 whitespace-nowrap text-right">
                     Preço
                   </th>
@@ -490,7 +508,7 @@ export default function PartnerOrdersPage() {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       className="py-10 text-center text-neutral-400 text-sm"
                     >
                       Carregando pedidos…
@@ -499,7 +517,7 @@ export default function PartnerOrdersPage() {
                 ) : orders.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       className="py-10 text-center text-neutral-400 text-sm"
                     >
                       Nenhum pedido encontrado para esta loja.
@@ -561,6 +579,11 @@ export default function PartnerOrdersPage() {
                         <td className="py-4 px-3 text-sm text-neutral-700 whitespace-nowrap">
                           {f["Store Name"] || "—"}
                         </td>
+
+                        <td className="py-4 px-3 text-sm text-neutral-700 whitespace-nowrap">
+                          {f["CPF"] || "—"} {/* exibe CPF */}
+                        </td>
+
                         <td className="py-4 px-3 text-sm text-neutral-900 whitespace-nowrap text-right">
                           {price
                             ? `R$ ${price.toFixed(2).replace(".", ",")}`
