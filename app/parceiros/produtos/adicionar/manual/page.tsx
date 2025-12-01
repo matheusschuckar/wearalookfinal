@@ -129,29 +129,30 @@ export default function PartnerProductCreateManualPage() {
     })();
   }, [router]);
 
-  // categorias globais
-  useEffect(() => {
-    (async () => {
-      try {
-        type ProdCategoryRow = { category?: string | null };
-        const { data, error } = await supabase
-          .from("products")
-          .select<ProdCategoryRow>("category");
-        if (error) throw error;
+ // categorias globais
+useEffect(() => {
+  (async () => {
+    try {
+      const { data, error } = await supabase.from("products").select("category");
+      if (error) throw error;
 
-        const all = (data ?? [])
-          .map((r) => (r.category ? r.category.trim() : ""))
-          .filter(Boolean);
+      // tipagem explícita sem usar `any`
+      const rows = (data ?? []) as Array<{ category?: string | null }>;
 
-        const uniq = Array.from(new Set(all)).sort((a, b) =>
-          a.localeCompare(b, "pt-BR")
-        );
-        setAllCategories(uniq);
-      } catch (err) {
-        console.error("erro ao buscar categorias globais:", err);
-      }
-    })();
-  }, []);
+      const all = rows
+        .map((r) => (r.category ? r.category.trim() : ""))
+        .filter(Boolean);
+
+      const uniq = Array.from(new Set(all)).sort((a, b) =>
+        a.localeCompare(b, "pt-BR")
+      );
+      setAllCategories(uniq);
+    } catch (err) {
+      console.error("erro ao buscar categorias globais:", err);
+    }
+  })();
+}, []);
+
 
   // fechar dropdown
   useEffect(() => {
