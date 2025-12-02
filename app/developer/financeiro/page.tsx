@@ -206,25 +206,13 @@ export default function DeveloperFinancePage() {
     };
   }, [startDate, endDate, allowed, fetchOrdersRange]);
 
-  if (loading) {
-    return <main className="min-h-screen" style={{ backgroundColor: SURFACE }} />;
-  }
-
-  if (!allowed) {
-    return (
-      <main className="min-h-screen" style={{ backgroundColor: SURFACE }}>
-        <div className="mx-auto max-w-4xl px-8 py-20">
-          <h1 className="text-xl font-semibold mb-3">Acesso restrito</h1>
-          <p className="text-sm text-neutral-600">Você precisa estar na whitelist de developers para acessar esta página.</p>
-        </div>
-      </main>
-    );
-  }
-
-  // exclude statuses: "aguardando pagamento", "cancelado"
+  // ---------- Hooks that must run unconditionally (moved before conditional returns) ----------
+  // excluded statuses
   const excluded = useMemo(() => new Set(["aguardando pagamento", "cancelado"]), []);
+
+  // paid records (filtered)
   const paid = useMemo(() => {
-    if (!records) return [];
+    if (!records) return [] as AirtableRecord[];
     return records.filter((r) => {
       const s = String(r.fields["Status"] || "").toLowerCase().trim();
       return !excluded.has(s);
@@ -347,6 +335,23 @@ export default function DeveloperFinancePage() {
     a.remove();
     URL.revokeObjectURL(url);
   }, [rows, totals, startDate, endDate]);
+
+  // ---------- End hooks that must run unconditionally ----------
+
+  if (loading) {
+    return <main className="min-h-screen" style={{ backgroundColor: SURFACE }} />;
+  }
+
+  if (!allowed) {
+    return (
+      <main className="min-h-screen" style={{ backgroundColor: SURFACE }}>
+        <div className="mx-auto max-w-4xl px-8 py-20">
+          <h1 className="text-xl font-semibold mb-3">Acesso restrito</h1>
+          <p className="text-sm text-neutral-600">Você precisa estar na whitelist de developers para acessar esta página.</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen" style={{ backgroundColor: SURFACE }}>
