@@ -86,6 +86,79 @@ export default function NovoParceiroPage() {
 
   const stateOptions = useMemo(() => getStatesForCountry(country), [country]);
 
+  // ----- Small UI helpers (styled inputs/selects) -----
+  function SelectField({
+    label,
+    value,
+    onChange,
+    options,
+    disabled,
+    id,
+  }: {
+    label?: string;
+    value: string | number;
+    onChange: (v: string) => void;
+    options: { value: string | number; label: string }[];
+    disabled?: boolean;
+    id?: string;
+  }) {
+    return (
+      <div>
+        {label ? <label className="text-xs font-medium text-neutral-700">{label}</label> : null}
+        <div className="relative mt-2">
+          <select
+            id={id}
+            value={String(value ?? "")}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+            className={`appearance-none w-full rounded-xl border px-3 py-2 pr-10 text-sm bg-white ${disabled ? "opacity-60 cursor-not-allowed" : "hover:border-neutral-400"} `}
+          >
+            {options.map((o) => (
+              <option key={String(o.value)} value={String(o.value)}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M6 9l6 6 6-6" stroke="#7C6E61" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function TextField({
+    label,
+    value,
+    onChange,
+    placeholder,
+    id,
+    required,
+  }: {
+    label?: string;
+    value: string;
+    onChange: (v: string) => void;
+    placeholder?: string;
+    id?: string;
+    required?: boolean;
+  }) {
+    return (
+      <div>
+        {label ? <label className="text-xs font-medium text-neutral-700">{label}{required ? " *" : ""}</label> : null}
+        <input
+          id={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="mt-2 w-full rounded-xl border px-3 py-2 text-sm bg-white"
+        />
+      </div>
+    );
+  }
+
+  // ----- rest unchanged logic -----
   function toggleCategory(cat: Category) {
     setCategories((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
   }
@@ -122,8 +195,6 @@ export default function NovoParceiroPage() {
     setSubmitting(true);
 
     try {
-      // note: DB currently has columns country and city only.
-      // to preserve state info without altering DB schema we concat "City, State"
       const cityToSave = stateCode ? `${city.trim()}, ${stateCode}` : city.trim();
 
       const payload = {
@@ -152,7 +223,6 @@ export default function NovoParceiroPage() {
         return;
       }
 
-      // protocolo visível para o usuário (id criado + timestamp curto)
       const proto = `BLK-${String(data.id).padStart(6, "0")}`;
       setSuccessProtocol(proto);
 
@@ -285,39 +355,29 @@ export default function NovoParceiroPage() {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-neutral-700">País *</label>
-                <select
+                <SelectField
+                  label="País *"
                   value={country}
-                  onChange={(e) => { setCountry(e.target.value); setStateCode(""); }}
-                  className="mt-2 w-full rounded-xl border px-3 py-2 text-sm bg-white"
-                >
-                  {COUNTRY_OPTIONS.map((c) => (
-                    <option key={c.code} value={c.code}>{c.label}</option>
-                  ))}
-                </select>
+                  onChange={(v) => { setCountry(v); setStateCode(""); }}
+                  options={COUNTRY_OPTIONS.map((c) => ({ value: c.code, label: c.label }))}
+                />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-neutral-700">Estado *</label>
-                <select
+                <SelectField
+                  label="Estado *"
                   value={stateCode}
-                  onChange={(e) => setStateCode(e.target.value)}
-                  className="mt-2 w-full rounded-xl border px-3 py-2 text-sm bg-white"
+                  onChange={(v) => setStateCode(v)}
+                  options={stateOptions.length ? [{ value: "", label: "Selecione o estado" }, ...stateOptions] : [{ value: "", label: "—" }]}
                   disabled={stateOptions.length === 0}
-                >
-                  <option value="">{stateOptions.length ? "Selecione o estado" : "—"}</option>
-                  {stateOptions.map((s) => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-neutral-700">Cidade *</label>
-                <input
+                <TextField
+                  label="Cidade *"
                   value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className="mt-2 w-full rounded-xl border px-3 py-2 text-sm"
+                  onChange={(v) => setCity(v)}
                   placeholder="Cidade"
                 />
               </div>
@@ -389,14 +449,18 @@ export default function NovoParceiroPage() {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-neutral-700">Anos de operação (opcional)</label>
-                <select value={yearsActive} onChange={(e) => setYearsActive(e.target.value ? Number(e.target.value) : "")} className="mt-2 w-full rounded-xl border px-3 py-2 text-sm">
-                  <option value="">—</option>
-                  <option value="0">Emerging — menos de 1 ano</option>
-                  <option value="1">Established — 1–2 anos</option>
-                  <option value="3">Recognized — 3–5 anos</option>
-                  <option value="6">Legacy — 5+ anos</option>
-                </select>
+                <SelectField
+                  label="Anos de operação (opcional)"
+                  value={yearsActive === "" ? "" : String(yearsActive)}
+                  onChange={(v) => setYearsActive(v ? Number(v) : "")}
+                  options={[
+                    { value: "", label: "—" },
+                    { value: "0", label: "Emerging — menos de 1 ano" },
+                    { value: "1", label: "Established — 1–2 anos" },
+                    { value: "3", label: "Recognized — 3–5 anos" },
+                    { value: "6", label: "Legacy — 5+ anos" },
+                  ]}
+                />
               </div>
 
               <div>
