@@ -503,8 +503,8 @@ export default function PartnerFinancePage() {
               </p>
             )}
             <p className="mt-2 text-[12px] text-neutral-500">
-              Observação: pedidos com status "aguardando pagamento" ou "cancelado" são excluídos do cálculo.
-            </p>
+  Observação: pedidos com status &quot;aguardando pagamento&quot; ou &quot;cancelado&quot; são excluídos do cálculo.
+</p>
           </div>
 
           <div className="flex items-center gap-3">
