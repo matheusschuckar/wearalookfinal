@@ -112,7 +112,7 @@ export default function PartnerFinancePage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [storeName, setStoreName] = useState<string>("");
   const [loggedEmail, setLoggedEmail] = useState<string>("");
-  // removido `orders` porque não estava sendo usado; usamos apenas allOrdersCache
+  // usamos allOrdersCache como fonte bruta
   const [allOrdersCache, setAllOrdersCache] = useState<AirtableRecord[] | null>(null);
 
   // filtro de datas
@@ -257,9 +257,22 @@ export default function PartnerFinancePage() {
     });
   }, [allOrdersCache, startDate, endDate]);
 
-  // ordena
+  // Excluir pedidos sem entrada financeira: "aguardando pagamento" e "cancelado"
+  const excludedStatuses = useMemo(() => {
+    return new Set(["aguardando pagamento", "cancelado"]);
+  }, []);
+
+  const paidOrders = useMemo(() => {
+    return filteredOrders.filter((rec) => {
+      const raw = rec.fields["Status"] || "";
+      const normalized = String(raw).toLowerCase().trim();
+      return !excludedStatuses.has(normalized);
+    });
+  }, [filteredOrders, excludedStatuses]);
+
+  // ordena (agora sobre paidOrders)
   const sortedOrders = useMemo(() => {
-    const clone = filteredOrders.slice();
+    const clone = paidOrders.slice();
     clone.sort((a, b) => {
       if (sortBy === "created") {
         const da = new Date(a.fields["Created At"] || a.createdTime).getTime();
@@ -272,7 +285,7 @@ export default function PartnerFinancePage() {
       }
     });
     return clone;
-  }, [filteredOrders, sortBy, sortDir]);
+  }, [paidOrders, sortBy, sortDir]);
 
   // métricas e linhas derivadas
   type RowCalc = {
@@ -489,6 +502,9 @@ export default function PartnerFinancePage() {
                 {notice}
               </p>
             )}
+            <p className="mt-2 text-[12px] text-neutral-500">
+              Observação: pedidos com status "aguardando pagamento" ou "cancelado" são excluídos do cálculo.
+            </p>
           </div>
 
           <div className="flex items-center gap-3">
