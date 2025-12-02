@@ -1,119 +1,98 @@
-'use client';
+// app/developer/financeiro/page.tsx
+"use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
-
-export const dynamic = 'force-dynamic';
-
-type Perf = {
-  ordersToday: number;
-  viewsToday: number;
-  conversion: number;
-};
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 
 type AirtableRecord = {
   id: string;
-  fields: {
-    ['Store Name']?: string;
-    ['Created At']?: string;
-  };
   createdTime: string;
+  fields: {
+    ["Name"]?: string;
+    ["Order ID"]?: string;
+    ["Created At"]?: string;
+    ["Status"]?: string;
+    ["Store Name"]?: string;
+    ["Item Price"]?: number | string;
+    ["Notes"]?: string;
+    ["CPF"]?: string;
+  };
 };
 
-// ======= mini chart (igual estética do painel de parceiros) =======
-function MonthLine({ data, labels }: { data: number[]; labels: string[] }) {
-  const w = 520, h = 200;
-  const padLeft = 44, padRight = 20, padTop = 16, padBottom = 32;
-  const max = Math.max(...data, 0);
-  const min = 0;
-  const range = max - min || 1;
+const SURFACE = "#F7F4EF";
 
-  const points = data.map((v, i) => {
-    const x = padLeft + (i * (w - padLeft - padRight)) / (data.length > 1 ? data.length - 1 : 1);
-    const y = h - padBottom - ((v - min) / range) * (h - padTop - padBottom);
-    return [x, y] as [number, number];
-  });
+export const dynamic = "force-dynamic";
 
-  const d = points.map(([x, y], i) => (i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`)).join(' ');
+const DELIVERY_FEE = 20.0;
+const OPERATION_FEE = 3.4;
+const LOOK_COMMISSION_RATE = 0.1;
 
-  const yTicks = [0, Math.ceil(max / 2), max].map((v) => ({
-    value: v,
-    y: h - padBottom - ((v - min) / range) * (h - padTop - padBottom),
-  }));
-
-  const labelStep = labels.length > 12 ? Math.ceil(labels.length / 8) : 1;
-
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-[200px]">
-      {yTicks.map((t, idx) => (
-        <g key={idx}>
-          <line x1={padLeft} x2={w - padRight} y1={t.y} y2={t.y} stroke="#E7E1D9" strokeWidth={1} strokeDasharray="3 4" />
-          <text x={padLeft - 10} y={t.y + 4} textAnchor="end" fontSize="10" fill="#7C6E61">{t.value}</text>
-        </g>
-      ))}
-
-      <defs>
-        <linearGradient id="line" x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0%" stopColor="#111" stopOpacity="0.55" />
-          <stop offset="100%" stopColor="#111" stopOpacity="1" />
-        </linearGradient>
-      </defs>
-      <path d={d} fill="none" stroke="url(#line)" strokeWidth={2.2} strokeLinecap="round" />
-
-      {points.length ? (
-        <circle
-          cx={points[points.length - 1][0]}
-          cy={points[points.length - 1][1]}
-          r={3.5}
-          fill="#111"
-          stroke="white"
-          strokeWidth={1.4}
-        />
-      ) : null}
-
-      {labels.map((lab, i) => {
-        const x = padLeft + (i * (w - padLeft - padRight)) / (labels.length > 1 ? labels.length - 1 : 1);
-        return i % labelStep === 0 ? (
-          <text key={lab + i} x={x} y={h - 10} textAnchor="middle" fontSize="10" fill="#7C6E61">
-            {lab}
-          </text>
-        ) : null;
-      })}
-    </svg>
-  );
+function formatCurrencyBRL(v: number) {
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-// =================== PÁGINA ===================
-function DevHomeInner() {
+function parsePrice(raw?: number | string): number {
+  if (typeof raw === "number") return raw;
+  if (!raw) return 0;
+  const n = Number(String(raw).replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function formatDateLocal(iso?: string) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function escapeAirtableString(input: string) {
+  return input.replace(/'/g, "''");
+}
+
+type Preset =
+  | "last30"
+  | "today"
+  | "last7"
+  | "month"
+  | "year"
+  | "custom";
+
+export default function DevFinancePage() {
   const router = useRouter();
-
-  const SURFACE = '#F7F4EF';
-  const BORDER = '#E5E0DA';
-
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [allowed, setAllowed] = useState<boolean | null>(null);
-  const [userEmail, setUserEmail] = useState<string>('');
-  const [notice] = useState<string | null>(null); // setter removido (não usado)
+  const [userEmail, setUserEmail] = useState<string>("");
 
-  // métricas agregadas
-  const [perf, setPerf] = useState<Perf>({ ordersToday: 0, viewsToday: 0, conversion: 0 });
-  const [monthOrders, setMonthOrders] = useState<number>(0);
-  const [monthSeries, setMonthSeries] = useState<number[]>([]);
-  const [todaySeries, setTodaySeries] = useState<number[]>(Array(24).fill(0));
-  const [chartRange, setChartRange] = useState<'1d' | '7d' | '30d'>('30d');
-  const [rangeMenuOpen, setRangeMenuOpen] = useState(false);
-  const refreshTimer = useRef<NodeJS.Timeout | null>(null);
+  // date filters
+  const [preset, setPreset] = useState<Preset>("last30");
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().slice(0, 10);
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    const d = new Date();
+    return d.toISOString().slice(0, 10);
+  });
 
-  // --------- GUARD: whitelist developer_emails ----------
+  const [records, setRecords] = useState<AirtableRecord[] | null>(null);
+
+  // guard developer
   useEffect(() => {
-    let mounted = true;
     (async () => {
       setLoading(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user?.email) {
           setAllowed(false);
+          setLoading(false);
           return;
         }
         const email = user.email.toLowerCase();
@@ -133,223 +112,260 @@ function DevHomeInner() {
         console.error(e);
         setAllowed(false);
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     })();
-    return () => { mounted = false; };
   }, []);
 
-  // --------- Métricas agregadas (todas as marcas) ----------
-  async function fetchOrdersAllFromAirtable() {
-    const API_KEY = process.env.NEXT_PUBLIC_AIRTABLE_API_KEY;
-    const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID;
-    const TABLE = process.env.NEXT_PUBLIC_AIRTABLE_TABLE_NAME || 'Orders';
+  // fetch orders in range (pages through Airtable)
+  const fetchOrdersRangeAll = useCallback(
+    async (fromISO: string, toISO: string) => {
+      const API_KEY = process.env.NEXT_PUBLIC_AIRTABLE_API_KEY;
+      const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID;
+      const TABLE = process.env.NEXT_PUBLIC_AIRTABLE_TABLE_NAME || "Orders";
+      if (!API_KEY || !BASE_ID) return null;
 
-    if (!API_KEY || !BASE_ID) {
-      console.warn('[dev] Airtable envs faltando');
-      return {
-        monthCount: 0,
-        todayCount: 0,
-        dayBuckets: [] as number[],
-        hourBuckets: Array(24).fill(0) as number[],
-      };
-    }
+      // Airtable: IS_AFTER('{Created At}', 'from') && IS_BEFORE('{Created At}', 'to')
+      // We'll use inclusive range by taking start at 00:00 and end as next day (IS_BEFORE uses strict)
+      const formula = encodeURIComponent(`AND(IS_AFTER({Created At}, '${fromISO}'), IS_BEFORE({Created At}, '${toISO}'))`);
+      let url = `https://api.airtable.com/v0/${BASE_ID}/${TABLE}?filterByFormula=${formula}&pageSize=100`;
+      const all: AirtableRecord[] = [];
 
-    const nowUTC = new Date();
-    const startOfMonth = new Date(nowUTC.getFullYear(), nowUTC.getMonth(), 1);
-    const endOfMonth = new Date(nowUTC.getFullYear(), nowUTC.getMonth() + 1, 0);
-    const monthStartISO = startOfMonth.toISOString();
-
-    const monthEndPlus1 = new Date(endOfMonth);
-    monthEndPlus1.setDate(endOfMonth.getDate() + 1);
-    const monthEndISO = monthEndPlus1.toISOString();
-
-    // Sem filtro por loja — agrega tudo
-    const formula = encodeURIComponent(
-      `AND(IS_AFTER({Created At}, '${monthStartISO}'), IS_BEFORE({Created At}, '${monthEndISO}'))`
-    );
-
-    let url = `https://api.airtable.com/v0/${BASE_ID}/${TABLE}?filterByFormula=${formula}&pageSize=100`;
-    const all: AirtableRecord[] = [];
-
-    try {
-      while (true) {
-        const res = await fetch(url, { headers: { Authorization: `Bearer ${API_KEY}` } });
-        if (!res.ok) { console.error('[dev] airtable:', await res.text()); break; }
-        const json = await res.json();
-        const records: AirtableRecord[] = json.records || [];
-        all.push(...records);
-        if (!json.offset) break;
-        url = `https://api.airtable.com/v0/${BASE_ID}/${TABLE}?filterByFormula=${formula}&pageSize=100&offset=${json.offset}`;
-      }
-    } catch (err) {
-      console.error('[dev] fetch airtable failed:', err);
-    }
-
-    const monthCount = all.length;
-
-    const daysInMonth = endOfMonth.getDate();
-    const dayBuckets = Array.from({ length: daysInMonth }, () => 0);
-    const hourBuckets = Array.from({ length: 24 }, () => 0);
-
-    const todayLocal = new Date();
-    const y = todayLocal.getFullYear();
-    const m = todayLocal.getMonth();
-    const d = todayLocal.getDate();
-
-    let todayCount = 0;
-
-    for (const rec of all) {
-      const created = rec.fields['Created At'] || rec.createdTime;
-      if (!created) continue;
-      const t = new Date(created);
-      if (isNaN(t.getTime())) continue;
-
-      const day = t.getDate();
-      if (day >= 1 && day <= daysInMonth) dayBuckets[day - 1] += 1;
-
-      if (t.getFullYear() === y && t.getMonth() === m && t.getDate() === d) {
-        todayCount += 1;
-        const hour = t.getHours();
-        hourBuckets[hour] = (hourBuckets[hour] || 0) + 1;
-      }
-    }
-
-    return { monthCount, todayCount, dayBuckets, hourBuckets };
-  }
-
-  async function fetchAllViewsTodayFromSupabase() {
-    type ProductViewsRow = {
-      view_count_today: number | null;
-      view_count: number | null;
-    };
-
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('view_count_today, view_count');
-
-      if (error) {
-        console.error('[dev] views supabase:', error);
-        return 0;
+      try {
+        while (true) {
+          const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${API_KEY}` },
+            cache: "no-store",
+          });
+          if (!res.ok) {
+            console.error("[dev/financeiro] airtable:", await res.text());
+            return null;
+          }
+          const json = await res.json();
+          const recs: AirtableRecord[] = json.records || [];
+          all.push(...recs);
+          if (!json.offset) break;
+          url = `https://api.airtable.com/v0/${BASE_ID}/${TABLE}?filterByFormula=${formula}&pageSize=100&offset=${json.offset}`;
+        }
+      } catch (err) {
+        console.error("[dev/financeiro] fetch failed:", err);
+        return null;
       }
 
-      let total = 0;
-      const rows = (data ?? []) as ProductViewsRow[];
+      return all;
+    },
+    []
+  );
 
-      for (const row of rows) {
-        const today = typeof row.view_count_today === 'number' ? row.view_count_today : null;
-        const fallback = typeof row.view_count === 'number' ? row.view_count : 0;
-        total += (today ?? fallback);
-      }
-      return total;
-    } catch (e) {
-      console.error(e);
-      return 0;
+  // presets helper
+  const applyPreset = useCallback((p: Preset) => {
+    const now = new Date();
+    let s = new Date();
+    let e = new Date();
+    if (p === "today") {
+      s = new Date(now);
+      e = new Date(now);
+    } else if (p === "last7") {
+      s = new Date(now);
+      s.setDate(now.getDate() - 6);
+      e = new Date(now);
+    } else if (p === "last30") {
+      s = new Date(now);
+      s.setDate(now.getDate() - 29);
+      e = new Date(now);
+    } else if (p === "month") {
+      s = new Date(now.getFullYear(), now.getMonth(), 1);
+      e = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    } else if (p === "year") {
+      s = new Date(now.getFullYear(), 0, 1);
+      e = new Date(now.getFullYear(), 11, 31);
     }
-  }
+    setPreset(p);
+    setStartDate(s.toISOString().slice(0, 10));
+    setEndDate(e.toISOString().slice(0, 10));
+  }, []);
 
+  useEffect(() => {
+    applyPreset("last30");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // load records whenever date range changes
   useEffect(() => {
     if (allowed !== true) return;
     let cancelled = false;
 
     const load = async () => {
-      const [ordersAgg, viewsToday] = await Promise.all([
-        fetchOrdersAllFromAirtable(),
-        fetchAllViewsTodayFromSupabase(),
-      ]);
-      if (cancelled) return;
+      setLoading(true);
+      try {
+        const fromISO = new Date(startDate + "T00:00:00.000Z").toISOString();
+        // toISO: next day at 00:00 to make IS_BEFORE exclusive correct
+        const to = new Date(endDate + "T00:00:00.000Z");
+        to.setDate(to.getDate() + 1);
+        const toISO = to.toISOString();
 
-      setMonthOrders(ordersAgg.monthCount);
-      setMonthSeries(ordersAgg.dayBuckets);
-      setTodaySeries(ordersAgg.hourBuckets);
-
-      const orders = ordersAgg.todayCount;
-      const views = viewsToday;
-      const conversion = views > 0 ? (orders / views) * 100 : 0;
-
-      setPerf({ ordersToday: orders, viewsToday: views, conversion });
+        const recs = await fetchOrdersRangeAll(fromISO, toISO);
+        if (cancelled) return;
+        setRecords(recs);
+      } catch (e) {
+        console.error(e);
+        setRecords(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     };
 
     load();
-    const timer = setInterval(load, 60_000);
-    refreshTimer.current = timer as unknown as NodeJS.Timeout;
-    return () => { cancelled = true; clearInterval(timer); };
-  }, [allowed]);
+    return () => {
+      cancelled = true;
+    };
+  }, [startDate, endDate, allowed, fetchOrdersRangeAll]);
 
-  async function handleSignOut() {
-    await supabase.auth.signOut({ scope: 'local' });
-    router.replace('/');
-  }
+  // filter out statuses that are not paid
+  const excludedStatuses = useMemo(() => new Set(["aguardando pagamento", "cancelado"]), []);
+  const paidRecords = useMemo(() => {
+    if (!records) return [];
+    return records.filter((r) => {
+      const s = String(r.fields["Status"] || "").toLowerCase().trim();
+      return !excludedStatuses.has(s);
+    });
+  }, [records, excludedStatuses]);
 
-  const chartData = useMemo(() => {
-    const now = new Date();
-    if (chartRange === '1d') {
-      return { data: todaySeries, labels: Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}h`) };
+  // compute rows and totals
+  type RowCalc = {
+    id: string;
+    createdAtIso: string;
+    store: string;
+    orderId: string;
+    status: string;
+    priceGross: number;
+    deliveryFee: number;
+    operationFee: number;
+    valueForBrand: number;
+    commissionLook: number;
+    brandNet: number;
+    notes: string;
+  };
+
+  const rows: RowCalc[] = useMemo(() => {
+    return paidRecords.map((rec) => {
+      const f = rec.fields;
+      const priceGross = parsePrice(f["Item Price"]);
+      const feesTotal = DELIVERY_FEE + OPERATION_FEE;
+      const rawValue = priceGross - feesTotal;
+      const valueForBrand = Math.max(0, Number(rawValue.toFixed(2)));
+      const commissionLook = Number((valueForBrand * LOOK_COMMISSION_RATE).toFixed(2));
+      const brandNet = Number((valueForBrand - commissionLook).toFixed(2));
+      return {
+        id: rec.id,
+        createdAtIso: f["Created At"] || rec.createdTime,
+        store: f["Store Name"] || "—",
+        orderId: f["Order ID"] || "—",
+        status: f["Status"] || "—",
+        priceGross,
+        deliveryFee: DELIVERY_FEE,
+        operationFee: OPERATION_FEE,
+        valueForBrand,
+        commissionLook,
+        brandNet,
+        notes: f["Notes"]?.toString() || "—",
+      };
+    });
+  }, [paidRecords]);
+
+  const totals = useMemo(() => {
+    const totalGross = rows.reduce((s, r) => s + r.priceGross, 0);
+    const totalFees = rows.reduce((s, r) => s + r.deliveryFee + r.operationFee, 0);
+    const totalValueForBrands = rows.reduce((s, r) => s + r.valueForBrand, 0);
+    const totalCommission = rows.reduce((s, r) => s + r.commissionLook, 0);
+    const totalBrandNet = rows.reduce((s, r) => s + r.brandNet, 0);
+    return {
+      totalGross,
+      totalFees,
+      totalValueForBrands,
+      totalCommission,
+      totalBrandNet,
+      count: rows.length,
+    };
+  }, [rows]);
+
+  const handleExportCSV = useCallback(() => {
+    const header = [
+      "Created At",
+      "Order ID",
+      "Store",
+      "Status",
+      "Price Gross",
+      "Delivery Fee",
+      "Operation Fee",
+      "Value For Brand",
+      "Commission Look",
+      "Brand Net",
+      "Notes",
+    ];
+    const lines = [header.join(",")];
+    for (const r of rows) {
+      const fields = [
+        `"${formatDateLocal(r.createdAtIso)}"`,
+        `"${r.orderId}"`,
+        `"${r.store}"`,
+        `"${r.status}"`,
+        `"${r.priceGross.toFixed(2).replace('.', ',')}"`,
+        `"${r.deliveryFee.toFixed(2).replace('.', ',')}"`,
+        `"${r.operationFee.toFixed(2).replace('.', ',')}"`,
+        `"${r.valueForBrand.toFixed(2).replace('.', ',')}"`,
+        `"${r.commissionLook.toFixed(2).replace('.', ',')}"`,
+        `"${r.brandNet.toFixed(2).replace('.', ',')}"`,
+        `"${(r.notes || '').replace(/"/g, '""')}"`,
+      ];
+      lines.push(fields.join(","));
     }
-    const full = monthSeries.length ? monthSeries : [0];
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
 
-    if (chartRange === '7d') {
-      const day = now.getDate();
-      const start = Math.max(1, day - 6);
-      const slice = full.slice(start - 1, day);
-      const labs = Array.from({ length: slice.length }, (_, i) => `${start + i}`);
-      return { data: slice, labels: labs };
-    }
-    return { data: full, labels: Array.from({ length: daysInMonth }, (_, i) => String(i + 1)) };
-  }, [chartRange, monthSeries, todaySeries]);
+    lines.push(
+      [
+        `"Totals"`,
+        "",
+        "",
+        "",
+        `"${totals.totalGross.toFixed(2).replace(".", ",")}"`,
+        `"${totals.totalFees.toFixed(2).replace(".", ",")}"`,
+        "",
+        `"${totals.totalValueForBrands.toFixed(2).replace(".", ",")}"`,
+        `"${totals.totalCommission.toFixed(2).replace(".", ",")}"`,
+        `"${totals.totalBrandNet.toFixed(2).replace(".", ",")}"`,
+        "",
+      ].join(",")
+    );
+
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const filename = `dev_financeiro_${startDate}_to_${endDate}.csv`;
+    a.setAttribute("download", filename);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, [rows, totals, startDate, endDate]);
 
   if (loading) {
-    return (
-      <main className="min-h-screen" style={{ backgroundColor: SURFACE }}>
-        <div className="mx-auto max-w-6xl px-8 pt-20 animate-pulse">
-          <div className="h-8 w-64 rounded-lg bg-neutral-300/30" />
-          <div className="mt-3 h-4 w-80 rounded-lg bg-neutral-300/30" />
-        </div>
-      </main>
-    );
+    return <main className="min-h-screen" style={{ backgroundColor: SURFACE }} />;
   }
 
   if (!allowed) {
     return (
       <main className="min-h-screen" style={{ backgroundColor: SURFACE }}>
-        <header className="w-full border-b border-[#E5E0DA]/80 bg-[#F7F4EF]/80 backdrop-blur-sm">
-          <div className="mx-auto max-w-6xl px-8 h-14 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-black flex items-center justify-center">
-                <span className="text-[13px] font-semibold tracking-tight text-white leading-none">L</span>
-              </div>
-              <div className="flex flex-col leading-tight">
-                <span className="text-sm font-semibold tracking-tight text-black">Look</span>
-                <span className="text-[11px] text-neutral-500">Painel do developer</span>
-              </div>
-            </div>
-          </div>
-        </header>
-        <div className="mx-auto max-w-3xl px-8 py-16">
-          <h1 className="text-xl font-semibold mb-2">Acesso restrito</h1>
-          <p className="text-sm text-neutral-600">Você precisa estar na whitelist de developers.</p>
+        <div className="mx-auto max-w-4xl px-8 py-20">
+          <h1 className="text-xl font-semibold mb-3">Acesso restrito</h1>
+          <p className="text-sm text-neutral-600">Você precisa estar na whitelist de developers para acessar esta página.</p>
         </div>
       </main>
     );
   }
 
-  // Card estilizado como no painel de parceiros
-  function Card(props: { children: React.ReactNode; className?: string }) {
-    return (
-      <div
-        className={`rounded-3xl p-8 shadow-[0_10px_30px_-18px_rgba(0,0,0,0.18)] transition hover:shadow-[0_10px_40px_-16px_rgba(0,0,0,0.22)] ${props.className ?? ''}`}
-        style={{ backgroundColor: 'rgba(255,255,255,0.55)', border: `1px solid ${BORDER}`, backdropFilter: 'blur(6px)' }}
-      >
-        {props.children}
-      </div>
-    );
-  }
-
   return (
     <main className="min-h-screen" style={{ backgroundColor: SURFACE }}>
-      {/* topbar */}
       <header className="w-full border-b border-[#E5E0DA]/80 bg-[#F7F4EF]/80 backdrop-blur-sm">
         <div className="mx-auto max-w-6xl px-8 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -358,9 +374,10 @@ function DevHomeInner() {
             </div>
             <div className="flex flex-col leading-tight">
               <span className="text-sm font-semibold tracking-tight text-black">Look</span>
-              <span className="text-[11px] text-neutral-500">Painel do developer</span>
+              <span className="text-[11px] text-neutral-500">Financeiro consolidado</span>
             </div>
           </div>
+
           <div className="flex items-center gap-3">
             {userEmail ? (
               <span className="px-3 py-1 rounded-full bg-white/70 border border-neutral-200 text-[11px] text-neutral-700">
@@ -368,7 +385,10 @@ function DevHomeInner() {
               </span>
             ) : null}
             <button
-              onClick={handleSignOut}
+              onClick={async () => {
+                await supabase.auth.signOut({ scope: "local" });
+                router.replace("/parceiros/login");
+              }}
               className="h-9 rounded-full px-4 text-xs font-medium text-neutral-700 hover:text-black transition border border-neutral-300/70 bg-white/70"
             >
               Sair
@@ -377,161 +397,128 @@ function DevHomeInner() {
         </div>
       </header>
 
-      {/* hero */}
-      <div className="mx-auto max-w-6xl px-8 pt-12 flex items-start justify-between gap-6">
-        <div>
-          <h1 className="text-[38px] leading-tight font-medium tracking-tight text-black">
-            Bom trabalho hoje.
-          </h1>
-          <p className="mt-4 text-[15px] text-neutral-700 max-w-xl leading-relaxed">
-            Overview de todas as marcas: pedidos, views e conversão. Abaixo, personalize a Home da Look.
-          </p>
-          {notice && (
-            <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">{notice}</p>
-          )}
+      <div className="mx-auto max-w-6xl px-8 pt-10 pb-20 space-y-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-[30px] font-semibold text-black tracking-tight">Financeiro (Look)</h1>
+            <p className="text-sm text-neutral-600 mt-1">Visão consolidada do faturamento de todas as marcas. Pedidos com status &quot;aguardando pagamento&quot; e &quot;cancelado&quot; são excluídos.</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => handleExportCSV()}
+              className="h-10 px-4 rounded-full bg-white border border-neutral-300 text-sm hover:bg-neutral-50"
+            >
+              Exportar CSV
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* respiro */}
-      <div className="h-10" />
+        {/* filtros */}
+        <div className="rounded-3xl bg-white/60 border border-[rgba(229,224,218,0.8)] p-4 flex flex-col gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="text-[13px] font-medium">Período</div>
 
-      {/* grid 2x2 */}
-      <div className="mx-auto max-w-6xl px-8 pb-20 grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* KPI HOJE */}
-        <Card>
-          <h2 className="text-[20px] font-semibold text-black">Hoje (todas as marcas)</h2>
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="rounded-2xl border border-neutral-200/80 bg-white/60 p-4 text-center">
-              <div className="text-[12px] text-neutral-500">Pedidos</div>
-              <div className="mt-1 text-2xl font-semibold text-black">{perf.ordersToday}</div>
-            </div>
-            <div className="rounded-2xl border border-neutral-200/80 bg-white/60 p-4 text-center">
-              <div className="text-[12px] text-neutral-500">Visualizações</div>
-              <div className="mt-1 text-2xl font-semibold text-black">{perf.viewsToday}</div>
-            </div>
-            <div className="rounded-2xl border border-neutral-200/80 bg-white/60 p-4 text-center">
-              <div className="text-[12px] text-neutral-500">Conversão</div>
-              <div className="mt-1 text-2xl font-semibold text-black">{perf.conversion.toFixed(1)}%</div>
-            </div>
-          </div>
-        </Card>
-
-        {/* ATALHOS */}
-        <Card>
-          <h2 className="text-[20px] font-semibold text-black">Ações rápidas</h2>
-          <p className="mt-1 text-sm text-neutral-600 leading-relaxed">Atalhos do dia a dia.</p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <button
-              onClick={() => router.push('/developer/pedidos')}
-              className="inline-flex h-11 items-center justify-center rounded-full bg-black px-6 text-sm font-medium text-white shadow-md hover:opacity-90 active:scale-[0.98] transition"
-            >
-              Ver pedidos (Airtable)
-            </button>
-            <button
-              onClick={() => router.push('/developer/products')}
-              className="inline-flex h-11 items-center justify-center rounded-full border border-neutral-300/70 bg-white/70 px-6 text-sm font-medium text-neutral-900 hover:bg-white"
-            >
-              Produtos (geral)
-            </button>
-          </div>
-        </Card>
-
-        {/* GRÁFICO DE PEDIDOS */}
-        <Card className="md:col-span-2">
-          <div className="flex items-center justify-between mb-4 gap-4">
-            <div>
-              <h2 className="text-[20px] font-semibold text-black">Pedidos no período (todas as marcas)</h2>
-              <p className="mt-1 text-sm text-neutral-600">A partir do Airtable.</p>
+            <div className="flex items-center gap-2">
+              <button onClick={() => applyPreset("today")} className={`px-3 h-9 rounded-full border text-sm ${preset === "today" ? "bg-black text-white border-black" : "bg-white border-neutral-300"}`}>Hoje</button>
+              <button onClick={() => applyPreset("last7")} className={`px-3 h-9 rounded-full border text-sm ${preset === "last7" ? "bg-black text-white border-black" : "bg-white border-neutral-300"}`}>Últimos 7 dias</button>
+              <button onClick={() => applyPreset("last30")} className={`px-3 h-9 rounded-full border text-sm ${preset === "last30" ? "bg-black text-white border-black" : "bg-white border-neutral-300"}`}>Últimos 30 dias</button>
+              <button onClick={() => applyPreset("month")} className={`px-3 h-9 rounded-full border text-sm ${preset === "month" ? "bg-black text-white border-black" : "bg-white border-neutral-300"}`}>Mês corrente</button>
+              <button onClick={() => applyPreset("year")} className={`px-3 h-9 rounded-full border text-sm ${preset === "year" ? "bg-black text-white border-black" : "bg-white border-neutral-300"}`}>Ano</button>
+              <button onClick={() => setPreset("custom")} className={`px-3 h-9 rounded-full border text-sm ${preset === "custom" ? "bg-black text-white border-black" : "bg-white border-neutral-300"}`}>Intervalo custom</button>
             </div>
 
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setRangeMenuOpen((v) => !v)}
-                className="h-9 inline-flex items-center gap-2 rounded-full bg-white/80 border border-neutral-200/80 px-4 text-sm leading-none text-neutral-900 shadow-sm hover:bg-white whitespace-nowrap"
-              >
-                <span className="whitespace-nowrap">
-                  {chartRange === '1d' ? 'Hoje' : chartRange === '7d' ? 'Últimos 7 dias' : 'Últimos 30 dias'}
-                </span>
-                <span className="text-[11px] text-neutral-500 leading-none">▼</span>
-              </button>
-
-              {rangeMenuOpen ? (
-                <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-white/95 border border-neutral-200/80 shadow-[0_16px_40px_-24px_rgba(0,0,0,0.25)] backdrop-blur-sm overflow-hidden z-20">
-                  <button
-                    onClick={() => { setChartRange('1d'); setRangeMenuOpen(false); }}
-                    className={`w-full text-left px-4 py-2 text-sm ${chartRange === '1d' ? 'bg-black text-white' : 'text-neutral-700 hover:bg-neutral-50'}`}
-                  >
-                    Hoje
-                  </button>
-                  <button
-                    onClick={() => { setChartRange('7d'); setRangeMenuOpen(false); }}
-                    className={`w-full text-left px-4 py-2 text-sm ${chartRange === '7d' ? 'bg-black text-white' : 'text-neutral-700 hover:bg-neutral-50'}`}
-                  >
-                    Últimos 7 dias
-                  </button>
-                  <button
-                    onClick={() => { setChartRange('30d'); setRangeMenuOpen(false); }}
-                    className={`w-full text-left px-4 py-2 text.sm ${chartRange === '30d' ? 'bg-black text-white' : 'text-neutral-700 hover:bg-neutral-50'}`}
-                  >
-                    Últimos 30 dias
-                  </button>
-                </div>
-              ) : null}
+            <div className="ml-auto flex items-center gap-2">
+              <div className="text-[12px] text-neutral-600">De</div>
+              <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPreset("custom"); }} className="h-9 rounded-xl border border-neutral-300 px-3 text-sm" max={endDate} />
+              <div className="text-[12px] text-neutral-600">Até</div>
+              <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPreset("custom"); }} className="h-9 rounded-xl border border-neutral-300 px-3 text-sm" min={startDate} />
             </div>
           </div>
 
-          <div className="rounded-2xl bg-white/50 border border-neutral-100/70 p-3">
-            <MonthLine data={chartData.data} labels={chartData.labels} />
+          <div className="text-sm text-neutral-500">
+            Período: <b>{startDate} — {endDate}</b>
+          </div>
+        </div>
+
+        {/* KPIs */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="rounded-2xl p-4 bg-white border border-neutral-200">
+            <div className="text-xs text-neutral-500">Bruto (soma Item Price)</div>
+            <div className="text-lg font-semibold mt-1">{formatCurrencyBRL(totals.totalGross)}</div>
           </div>
 
-          <div className="mt-3 text-xs text-neutral-600">
-            Total no mês: <span className="font-semibold text-neutral-900">{monthOrders}</span>
+          <div className="rounded-2xl p-4 bg-white border border-neutral-200">
+            <div className="text-xs text-neutral-500">Deduções fixas (entrega + operação)</div>
+            <div className="text-lg font-semibold mt-1">{formatCurrencyBRL(totals.totalFees)}</div>
           </div>
-        </Card>
 
-        {/* GESTÃO DE ENTREGADORES */}
-<Card>
-  <h2 className="text-[20px] font-semibold text-black">Entregadores</h2>
-  <p className="mt-1 text-sm text-neutral-600 leading-relaxed">
-    Veja quem se cadastrou, aprove ou rejeite motoristas e gerencie suspensões.
-  </p>
-
-  <div className="mt-7">
-    <button
-      onClick={() => router.push('/developer/entregadores')}
-      className="inline-flex h-11 items-center justify-center rounded-full bg-black px-6 text-sm font-medium text-white shadow-md hover:opacity-90 active:scale-[0.98] transition"
-    >
-      Gerenciar entregadores
-    </button>
-  </div>
-</Card>
-
-
-        {/* GERENCIAR BANNERS (apenas CTA) */}
-        <Card className="md:col-span-2">
-          <h2 className="text-[20px] font-semibold text-black">Gerenciar Home (Banners)</h2>
-          <p className="mt-1 text-sm text-neutral-600 leading-relaxed">
-            Edite carrossel, editorial tall e selection hero por cidade.
-          </p>
-          <div className="mt-7">
-            <button
-              onClick={() => router.push('/developer/banners')}
-              className="inline-flex h-11 items-center justify-center rounded-full bg-black px-6 text-sm font-medium text-white shadow-md hover:opacity-90 active:scale-[0.98] transition"
-            >
-              Abrir gerenciador
-            </button>
+          <div className="rounded-2xl p-4 bg-white border border-neutral-200">
+            <div className="text-xs text-neutral-500">Faturamento antes da comissão (para marcas)</div>
+            <div className="text-lg font-semibold mt-1">{formatCurrencyBRL(totals.totalValueForBrands)}</div>
           </div>
-        </Card>
+
+          <div className="rounded-2xl p-4 bg-white border border-neutral-200">
+            <div className="text-xs text-neutral-500">Receita Look (comissão 10%)</div>
+            <div className="text-lg font-semibold mt-1">{formatCurrencyBRL(totals.totalCommission)}</div>
+          </div>
+
+          <div className="rounded-2xl p-4 bg-white border border-neutral-200">
+            <div className="text-xs text-neutral-500">Total líquido para marcas</div>
+            <div className="text-lg font-semibold mt-1">{formatCurrencyBRL(totals.totalBrandNet)}</div>
+            <div className="text-xs text-neutral-500 mt-1">{totals.count} pedido(s)</div>
+          </div>
+        </div>
+
+        {/* tabela */}
+        <div className="rounded-3xl bg-white/55 border border-[rgba(229,224,218,0.8)] backdrop-blur-sm shadow-[0_12px_35px_-28px_rgba(0,0,0,0.3)] overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-[1100px] w-full text-left text-sm text-neutral-900">
+              <thead className="bg-[#F0ECE6] text-[11px] uppercase tracking-wide text-neutral-500/90">
+                <tr>
+                  <th className="py-3 pl-5 pr-3 whitespace-nowrap">Criado em</th>
+                  <th className="py-3 px-3 whitespace-nowrap">Nº do pedido</th>
+                  <th className="py-3 px-3 whitespace-nowrap">Loja</th>
+                  <th className="py-3 px-3 whitespace-nowrap">Status</th>
+                  <th className="py-3 px-3 whitespace-nowrap text-right">Preço bruto</th>
+                  <th className="py-3 px-3 whitespace-nowrap text-right">Entrega</th>
+                  <th className="py-3 px-3 whitespace-nowrap text-right">Taxa op.</th>
+                  <th className="py-3 px-3 whitespace-nowrap text-right">Valor p/ marca</th>
+                  <th className="py-3 px-3 whitespace-nowrap text-right">Comissão Look</th>
+                  <th className="py-3 px-3 whitespace-nowrap text-right">Líquido p/ marca</th>
+                  <th className="py-3 pl-3 pr-5 whitespace-nowrap">Notas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {!rows.length ? (
+                  <tr>
+                    <td colSpan={11} className="py-10 text-center text-neutral-400 text-sm">Nenhum pedido encontrado neste período.</td>
+                  </tr>
+                ) : (
+                  rows.map((r) => (
+                    <tr key={r.id} style={{ borderBottom: "1px solid rgba(224, 215, 204, 0.65)" }}>
+                      <td className="py-4 pl-5 pr-3 text-sm text-neutral-800 whitespace-nowrap">{formatDateLocal(r.createdAtIso)}</td>
+                      <td className="py-4 px-3 text-sm text-neutral-800 whitespace-nowrap">{r.orderId}</td>
+                      <td className="py-4 px-3 text-sm text-neutral-700 whitespace-nowrap">{r.store}</td>
+                      <td className="py-4 px-3 text-sm whitespace-nowrap">{r.status}</td>
+                      <td className="py-4 px-3 text-sm text-neutral-900 whitespace-nowrap text-right">{formatCurrencyBRL(r.priceGross)}</td>
+                      <td className="py-4 px-3 text-sm text-neutral-900 whitespace-nowrap text-right">{formatCurrencyBRL(r.deliveryFee)}</td>
+                      <td className="py-4 px-3 text-sm text-neutral-900 whitespace-nowrap text-right">{formatCurrencyBRL(r.operationFee)}</td>
+                      <td className="py-4 px-3 text-sm text-neutral-900 whitespace-nowrap text-right">{formatCurrencyBRL(r.valueForBrand)}</td>
+                      <td className="py-4 px-3 text-sm text-neutral-900 whitespace-nowrap text-right">{formatCurrencyBRL(r.commissionLook)}</td>
+                      <td className="py-4 px-3 text-sm text-neutral-900 whitespace-nowrap text-right">{formatCurrencyBRL(r.brandNet)}</td>
+                      <td className="py-4 pl-3 pr-5 text-sm text-neutral-700 align-top">
+                        <div className="min-w-[260px] max-h-[80px] overflow-y-auto leading-relaxed pr-1">{r.notes || "—"}</div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
     </main>
-  );
-}
-
-export default function DeveloperPage() {
-  return (
-    <Suspense fallback={<main className="min-h-screen bg-[#F7F4EF]" />}>
-      <DevHomeInner />
-    </Suspense>
   );
 }
