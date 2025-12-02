@@ -276,8 +276,11 @@ function ProductPickerModal({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[60] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-5xl rounded-3xl bg-white border border-neutral-200 shadow-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-neutral-200 flex items-center justify-between">
+      {/* OBS: transformei o conteúdo em flex-col, limitei a altura relativa à viewport
+          e permiti overflow auto apenas na área de conteúdo (grid), mantendo header/footer visíveis */}
+      <div className="w-full max-w-5xl rounded-3xl bg-white border border-neutral-200 shadow-2xl flex flex-col overflow-hidden"
+           style={{ maxHeight: "calc(100vh - 32px)" }}>
+        <div className="px-6 py-4 border-b border-neutral-200 flex items-center justify-between flex-shrink-0">
           <div className="font-semibold">{title}</div>
           <button
             onClick={onClose}
@@ -287,7 +290,7 @@ function ProductPickerModal({
           </button>
         </div>
 
-        <div className="p-4 flex items-center gap-3">
+        <div className="p-4 flex items-center gap-3 flex-shrink-0">
           <input
             placeholder="Buscar por nome…"
             value={q}
@@ -300,7 +303,8 @@ function ProductPickerModal({
           </div>
         </div>
 
-        <div className="p-4">
+        {/* área central rolável */}
+        <div className="p-4 overflow-auto">
           {loading ? (
             <div className="text-sm text-neutral-600">Carregando…</div>
           ) : (
@@ -342,7 +346,7 @@ function ProductPickerModal({
           )}
         </div>
 
-        <div className="px-6 py-4 border-t border-neutral-200 flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-neutral-200 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
