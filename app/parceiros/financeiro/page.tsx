@@ -112,7 +112,7 @@ export default function PartnerFinancePage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [storeName, setStoreName] = useState<string>("");
   const [loggedEmail, setLoggedEmail] = useState<string>("");
-  const [orders, setOrders] = useState<AirtableRecord[]>([]);
+  // removido `orders` porque não estava sendo usado; usamos apenas allOrdersCache
   const [allOrdersCache, setAllOrdersCache] = useState<AirtableRecord[] | null>(null);
 
   // filtro de datas
@@ -190,7 +190,6 @@ export default function PartnerFinancePage() {
           return;
         }
         setAllOrdersCache(data);
-        setOrders(data);
         setNotice(null);
       } catch (err) {
         console.error(err);
@@ -203,7 +202,6 @@ export default function PartnerFinancePage() {
       const data = await fetchOrdersForStore(storeName);
       if (!cancelled && data && data.length) {
         setAllOrdersCache(data);
-        setOrders(data);
       }
     }, 15_000);
     return () => {
