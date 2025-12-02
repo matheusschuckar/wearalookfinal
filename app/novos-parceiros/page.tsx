@@ -1,7 +1,7 @@
 // app/novos-parceiros/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -19,6 +19,48 @@ const CATEGORY_OPTIONS = [
 
 type Category = typeof CATEGORY_OPTIONS[number];
 
+const COUNTRY_OPTIONS = [
+  { code: "BR", label: "Brazil" },
+  { code: "FR", label: "France" },
+  { code: "IT", label: "Italy" },
+  { code: "US", label: "United States" },
+  { code: "GB", label: "United Kingdom" },
+  { code: "ES", label: "Spain" },
+  { code: "PT", label: "Portugal" },
+  { code: "OTHER", label: "Other" },
+];
+
+function getStatesForCountry(code: string) {
+  switch (code) {
+    case "BR":
+      return [
+        "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"
+      ].map((s) => ({ value: s, label: s }));
+    case "US":
+      return [
+        "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"
+      ].map((s) => ({ value: s, label: s }));
+    case "FR":
+      return [
+        "Auvergne-Rhône-Alpes","Bourgogne-Franche-Comté","Brittany","Centre-Val de Loire","Corsica","Grand Est","Hauts-de-France","Île-de-France","Normandy","Nouvelle-Aquitaine","Occitanie","Pays de la Loire","Provence-Alpes-Côte d'Azur"
+      ].map((s) => ({ value: s, label: s }));
+    case "IT":
+      return [
+        "Abruzzo","Aosta Valley","Apulia","Basilicata","Calabria","Campania","Emilia-Romagna","Friuli Venezia Giulia","Lazio","Liguria","Lombardy","Marche","Molise","Piedmont","Sardinia","Sicily","Trentino-Alto Adige","Tuscany","Umbria","Veneto"
+      ].map((s) => ({ value: s, label: s }));
+    case "ES":
+      return [
+        "Andalusia","Aragon","Asturias","Balearic Islands","Basque Country","Canary Islands","Cantabria","Castile and León","Castilla-La Mancha","Catalonia","Extremadura","Galicia","La Rioja","Madrid","Murcia","Navarre","Valencian Community"
+      ].map((s) => ({ value: s, label: s }));
+    case "PT":
+      return [
+        "Açores","Alentejo","Algarve","Centro","Lisboa","Madeira","Norte"
+      ].map((s) => ({ value: s, label: s }));
+    default:
+      return [];
+  }
+}
+
 export default function NovoParceiroPage() {
   const router = useRouter();
 
@@ -27,7 +69,8 @@ export default function NovoParceiroPage() {
   const [contactRole, setContactRole] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
-  const [country, setCountry] = useState("Brazil");
+  const [country, setCountry] = useState<string>("BR");
+  const [stateCode, setStateCode] = useState<string>("");
   const [city, setCity] = useState("");
   const [website, setWebsite] = useState("");
   const [instagram, setInstagram] = useState("");
@@ -40,6 +83,8 @@ export default function NovoParceiroPage() {
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [successProtocol, setSuccessProtocol] = useState<string | null>(null);
+
+  const stateOptions = useMemo(() => getStatesForCountry(country), [country]);
 
   function toggleCategory(cat: Category) {
     setCategories((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
@@ -55,6 +100,10 @@ export default function NovoParceiroPage() {
     if (!instagram.trim()) return "Precisamos do perfil no Instagram para avaliação.";
     if (categories.length === 0) return "Selecione pelo menos um tipo de produto.";
     if (!stockReady) return "Informe disponibilidade de estoque.";
+    // country/state/city validations
+    if (!country) return "Selecione um país.";
+    if (stateOptions.length > 0 && !stateCode) return "Selecione o estado.";
+    if (!city.trim()) return "Preencha a cidade.";
     if (!consent) return "É necessário concordar com a política para prosseguir.";
     return null;
   }
@@ -73,14 +122,18 @@ export default function NovoParceiroPage() {
     setSubmitting(true);
 
     try {
+      // note: DB currently has columns country and city only.
+      // to preserve state info without altering DB schema we concat "City, State"
+      const cityToSave = stateCode ? `${city.trim()}, ${stateCode}` : city.trim();
+
       const payload = {
         brand_name: brandName.trim(),
         contact_name: contactName.trim(),
         contact_role: contactRole.trim() || null,
         contact_email: contactEmail.trim(),
         contact_phone: contactPhone.trim(),
-        country: country || "Brazil",
-        city: city.trim() || null,
+        country: country || "BR",
+        city: cityToSave || null,
         website: website.trim() || null,
         instagram: instagram.trim().replace(/^@/, ""),
         product_categories: categories,
@@ -109,7 +162,8 @@ export default function NovoParceiroPage() {
       setContactRole("");
       setContactEmail("");
       setContactPhone("");
-      setCountry("Brazil");
+      setCountry("BR");
+      setStateCode("");
       setCity("");
       setWebsite("");
       setInstagram("");
@@ -153,7 +207,7 @@ export default function NovoParceiroPage() {
                 Candidate sua marca à curadoria Look
               </h1>
               <p className="mt-2 text-neutral-600 max-w-xl">
-                Envie as informações essenciais e nosso time editorial fará uma análise criteriosa. Respondemos com feedback personalizado em até 5 dias úteis.
+                Envie as informações essenciais e nosso time editorial fará uma avaliação criteriosa. Você recebe resposta personalizada em até 5 dias úteis.
               </p>
             </div>
 
@@ -185,7 +239,7 @@ export default function NovoParceiroPage() {
                   value={brandName}
                   onChange={(e) => setBrandName(e.target.value)}
                   className="mt-2 w-full rounded-xl border px-3 py-2 text-sm"
-                  placeholder="Ex.: Madame Brechó"
+                  placeholder="Ex.: Valentino"
                 />
               </div>
 
@@ -232,19 +286,39 @@ export default function NovoParceiroPage() {
 
               <div>
                 <label className="text-xs font-medium text-neutral-700">País *</label>
-                <input
+                <select
                   value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  className="mt-2 w-full rounded-xl border px-3 py-2 text-sm"
-                />
+                  onChange={(e) => { setCountry(e.target.value); setStateCode(""); }}
+                  className="mt-2 w-full rounded-xl border px-3 py-2 text-sm bg-white"
+                >
+                  {COUNTRY_OPTIONS.map((c) => (
+                    <option key={c.code} value={c.code}>{c.label}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label className="text-xs font-medium text-neutral-700">Cidade (opcional)</label>
+                <label className="text-xs font-medium text-neutral-700">Estado *</label>
+                <select
+                  value={stateCode}
+                  onChange={(e) => setStateCode(e.target.value)}
+                  className="mt-2 w-full rounded-xl border px-3 py-2 text-sm bg-white"
+                  disabled={stateOptions.length === 0}
+                >
+                  <option value="">{stateOptions.length ? "Selecione o estado" : "—"}</option>
+                  {stateOptions.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-neutral-700">Cidade *</label>
                 <input
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                   className="mt-2 w-full rounded-xl border px-3 py-2 text-sm"
+                  placeholder="Cidade"
                 />
               </div>
 
@@ -318,10 +392,10 @@ export default function NovoParceiroPage() {
                 <label className="text-xs font-medium text-neutral-700">Anos de operação (opcional)</label>
                 <select value={yearsActive} onChange={(e) => setYearsActive(e.target.value ? Number(e.target.value) : "")} className="mt-2 w-full rounded-xl border px-3 py-2 text-sm">
                   <option value="">—</option>
-                  <option value="0">Menos de 1 ano</option>
-                  <option value="1">1–2 anos</option>
-                  <option value="3">3–5 anos</option>
-                  <option value="6">Mais de 5 anos</option>
+                  <option value="0">Emerging — menos de 1 ano</option>
+                  <option value="1">Established — 1–2 anos</option>
+                  <option value="3">Recognized — 3–5 anos</option>
+                  <option value="6">Legacy — 5+ anos</option>
                 </select>
               </div>
 
