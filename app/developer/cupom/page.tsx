@@ -180,190 +180,238 @@ export default function DeveloperCouponPage() {
     }
   };
 
-  // -------------------- Render --------------------
+  // -------------------- Render (LAYOUT APENAS) --------------------
 
   return (
-    <main className="p-10 max-w-3xl mx-auto space-y-8">
-      <h1 className="text-2xl font-bold">Criar cupom (Developer)</h1>
-
-      {notice && (
-        <div className="p-3 rounded bg-amber-100 border border-amber-300 text-amber-900 text-sm">
-          {notice}
-        </div>
-      )}
-
-      {/* Código */}
-      <section className="space-y-2">
-        <label className="text-sm font-medium">Código</label>
-        <input
-          className="border rounded px-3 h-10 w-full"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-        />
-      </section>
-
-      {/* Descrição */}
-      <section className="space-y-2">
-        <label className="text-sm font-medium">Descrição</label>
-        <input
-          className="border rounded px-3 h-10 w-full"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-      </section>
-
-      {/* Tipo de desconto */}
-      <section className="space-y-2">
-        <label className="text-sm font-medium">Desconto</label>
-
-        <div className="flex gap-3 items-center">
-          <select
-            className="border rounded px-3 h-10"
-            value={discountType}
-            onChange={(e) => setDiscountType(e.target.value as DiscountType)}
-          >
-            <option value="percent">% (percentual)</option>
-            <option value="fixed">R$ (fixo)</option>
-          </select>
-
-          <input
-            className="border rounded px-3 h-10 w-32"
-            value={discountValue}
-            onChange={(e) => setDiscountValue(e.target.value)}
-          />
-        </div>
-      </section>
-
-      {/* Kind */}
-      <section className="space-y-2">
-        <label className="text-sm font-medium">Uso</label>
-        <select
-          className="border rounded px-3 h-10 w-full"
-          value={couponKind}
-          onChange={(e) => setCouponKind(e.target.value as CouponKind)}
-        >
-          <option value="A">A — uso único por CPF</option>
-          <option value="B">B — válido apenas no primeiro pedido</option>
-          <option value="C">C — ilimitado (qualquer número de usos)</option>
-        </select>
-      </section>
-
-      {/* Escopo */}
-      <section className="space-y-2">
-        <label className="text-sm font-medium">Escopo do cupom</label>
-
-        <select
-          className="border rounded px-3 h-10 w-full"
-          value={scope}
-          onChange={(e) =>
-            setScope(e.target.value as "global" | "brands" | "products")
-          }
-        >
-          <option value="global">Global — todas as marcas e produtos</option>
-          <option value="brands">Marcas específicas</option>
-          <option value="products">Produtos específicos</option>
-        </select>
-
-        {scope === "brands" && (
-          <div className="space-y-2 bg-white rounded border p-3">
-            <div className="text-xs mb-2">Selecione as marcas:</div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {brands.map((b) => {
-                const checked = selectedBrands.includes(b.id);
-                return (
-                  <label key={b.id} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => {
-                        setSelectedBrands((prev) =>
-                          checked
-                            ? prev.filter((x) => x !== b.id)
-                            : [...prev, b.id]
-                        );
-                      }}
-                    />
-                    {b.store_name}
-                  </label>
-                );
-              })}
+    <main className="min-h-screen bg-[#F7F4EF]">
+      <header className="w-full border-b border-[#E5E0DA]/80 bg-[#F7F4EF]/80 backdrop-blur-sm">
+        <div className="mx-auto max-w-6xl px-8 h-14 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-black flex items-center justify-center">
+              <span className="text-[13px] font-semibold tracking-tight text-white leading-none">L</span>
+            </div>
+            <div className="flex flex-col leading-tight">
+              <span className="text-sm font-semibold tracking-tight text-black">Cupons — Developer</span>
+              <span className="text-[11px] text-neutral-500">Crie cupons com escopo avançado</span>
             </div>
           </div>
-        )}
 
-        {scope === "products" && (
-          <div className="space-y-2 bg-white rounded border p-3">
-            <div className="text-xs mb-2">Selecione produtos:</div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSave}
+              disabled={loading}
+              className={`h-10 px-6 rounded-full text-sm font-medium text-white ${loading ? "bg-neutral-600" : "bg-black hover:opacity-90"}`}
+            >
+              {loading ? "Salvando…" : "Criar cupom"}
+            </button>
+          </div>
+        </div>
+      </header>
 
-            <div className="grid grid-cols-2 gap-2 max-h-[260px] overflow-auto">
-              {products.map((p) => {
-                const checked = selectedProducts.includes(p.id);
-                return (
-                  <label
-                    key={p.id}
-                    className="flex items-center gap-2 text-sm truncate"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => {
-                        setSelectedProducts((prev) =>
-                          checked
-                            ? prev.filter((x) => x !== p.id)
-                            : [...prev, p.id]
-                        );
-                      }}
-                    />
-                    {p.name}
-                  </label>
-                );
-              })}
+      <div className="mx-auto max-w-6xl px-8 py-10">
+        <div className="rounded-3xl p-6 shadow-[0_10px_30px_-18px_rgba(0,0,0,0.18)] bg-white/60 border" style={{ borderColor: "#E5E0DA", backdropFilter: "blur(6px)" }}>
+          <h1 className="text-xl font-semibold mb-4">Criar cupom (Developer)</h1>
+
+          {notice && (
+            <div className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-amber-900 border border-amber-200">
+              {notice}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Código */}
+            <div>
+              <label className="text-[12px] font-medium text-neutral-700 block mb-2">Código</label>
+              <input
+                className="w-full rounded-xl border border-neutral-300 h-10 px-3 text-sm"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="EX: LOOK10"
+              />
+            </div>
+
+            {/* Descrição */}
+            <div>
+              <label className="text-[12px] font-medium text-neutral-700 block mb-2">Descrição (opcional)</label>
+              <input
+                className="w-full rounded-xl border border-neutral-300 h-10 px-3 text-sm"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Breve descrição para controle interno"
+              />
+            </div>
+
+            {/* Desconto */}
+            <div>
+              <label className="text-[12px] font-medium text-neutral-700 block mb-2">Desconto</label>
+              <div className="flex items-center gap-3">
+                <select
+                  className="rounded-xl border border-neutral-300 h-10 px-3 text-sm"
+                  value={discountType}
+                  onChange={(e) => setDiscountType(e.target.value as DiscountType)}
+                >
+                  <option value="percent">% (percentual)</option>
+                  <option value="fixed">R$ (fixo)</option>
+                </select>
+                <input
+                  className="rounded-xl border border-neutral-300 h-10 px-3 text-sm w-32"
+                  value={discountValue}
+                  onChange={(e) => setDiscountValue(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Kind */}
+            <div>
+              <label className="text-[12px] font-medium text-neutral-700 block mb-2">Uso (Kind)</label>
+              <select
+                className="w-full rounded-xl border border-neutral-300 h-10 px-3 text-sm"
+                value={couponKind}
+                onChange={(e) => setCouponKind(e.target.value as CouponKind)}
+              >
+                <option value="A">A — uso único por CPF</option>
+                <option value="B">B — válido apenas no primeiro pedido</option>
+                <option value="C">C — ilimitado (qualquer número de usos)</option>
+              </select>
+            </div>
+
+            {/* Validade */}
+            <div>
+              <label className="text-[12px] font-medium text-neutral-700 block mb-2">Validade (opcional)</label>
+              <input
+                type="date"
+                className="w-full rounded-xl border border-neutral-300 h-10 px-3 text-sm"
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+              />
+            </div>
+
+            {/* Max uses */}
+            <div>
+              <label className="text-[12px] font-medium text-neutral-700 block mb-2">Máximo de usos (opcional)</label>
+              <input
+                className="w-full rounded-xl border border-neutral-300 h-10 px-3 text-sm"
+                value={maxUses}
+                onChange={(e) => setMaxUses(e.target.value)}
+                placeholder="Ex.: 100"
+              />
+              <div className="text-[11px] text-neutral-500 mt-1">
+                Para kind A (uso único por CPF) este campo será ignorado.
+              </div>
+            </div>
+
+            {/* Ativo */}
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
+                <span className="text-sm">Ativo</span>
+              </label>
             </div>
           </div>
-        )}
-      </section>
 
-      {/* validade */}
-      <section className="space-y-2">
-        <label className="text-sm font-medium">Validade (opcional)</label>
-        <input
-          type="date"
-          className="border rounded px-3 h-10 w-full"
-          value={expiresAt}
-          onChange={(e) => setExpiresAt(e.target.value)}
-        />
-      </section>
+          {/* Escopo */}
+          <div className="mt-6">
+            <label className="text-sm font-medium block mb-2">Escopo do cupom</label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <button
+                onClick={() => setScope("global")}
+                className={`text-left px-4 h-10 rounded-xl border text-sm ${scope === "global" ? "bg-black text-white border-black" : "bg-white border-neutral-300"}`}
+              >
+                Global — todas as marcas e produtos
+              </button>
+              <button
+                onClick={() => setScope("brands")}
+                className={`text-left px-4 h-10 rounded-xl border text-sm ${scope === "brands" ? "bg-black text-white border-black" : "bg-white border-neutral-300"}`}
+              >
+                Marcas específicas
+              </button>
+              <button
+                onClick={() => setScope("products")}
+                className={`text-left px-4 h-10 rounded-xl border text-sm ${scope === "products" ? "bg-black text-white border-black" : "bg-white border-neutral-300"}`}
+              >
+                Produtos específicos
+              </button>
+            </div>
 
-      {/* max uses */}
-      <section className="space-y-2">
-        <label className="text-sm font-medium">Máximo de usos (opcional)</label>
-        <input
-          className="border rounded px-3 h-10 w-full"
-          value={maxUses}
-          onChange={(e) => setMaxUses(e.target.value)}
-        />
-      </section>
+            {scope === "brands" && (
+              <div className="mt-4 bg-white rounded border p-4">
+                <div className="text-xs mb-2">Selecione as marcas</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {brands.map((b) => {
+                    const checked = selectedBrands.includes(b.id);
+                    return (
+                      <label key={b.id} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            setSelectedBrands((prev) =>
+                              checked ? prev.filter((x) => x !== b.id) : [...prev, b.id]
+                            );
+                          }}
+                        />
+                        {b.store_name}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
-      {/* ativo */}
-      <section className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={active}
-          onChange={(e) => setActive(e.target.checked)}
-        />
-        <span className="text-sm">Ativo</span>
-      </section>
+            {scope === "products" && (
+              <div className="mt-4 bg-white rounded border p-4">
+                <div className="text-xs mb-2">Selecione produtos</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-[260px] overflow-auto">
+                  {products.map((p) => {
+                    const checked = selectedProducts.includes(p.id);
+                    return (
+                      <label key={p.id} className="flex items-center gap-2 text-sm truncate">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            setSelectedProducts((prev) =>
+                              checked ? prev.filter((x) => x !== p.id) : [...prev, p.id]
+                            );
+                          }}
+                        />
+                        {p.name}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
 
-      <button
-        onClick={handleSave}
-        disabled={loading}
-        className={`h-12 rounded-full px-6 text-white text-sm font-medium ${
-          loading ? "bg-neutral-600" : "bg-black hover:opacity-90"
-        }`}
-      >
-        {loading ? "Salvando…" : "Criar cupom"}
-      </button>
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              onClick={() => {
+                // reset small form (visual convenience)
+                setCode("");
+                setDescription("");
+                setDiscountValue("10");
+                setCouponKind("A");
+                setExpiresAt("");
+                setMaxUses("");
+                setSelectedBrands([]);
+                setSelectedProducts([]);
+              }}
+              className="h-10 px-4 rounded-full border bg-white/90 text-sm"
+            >
+              Limpar
+            </button>
+
+            <button
+              onClick={handleSave}
+              disabled={loading}
+              className={`h-10 px-6 rounded-full text-sm font-medium text-white ${loading ? "bg-neutral-600" : "bg-black hover:opacity-90"}`}
+            >
+              {loading ? "Salvando…" : "Criar cupom"}
+            </button>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }
