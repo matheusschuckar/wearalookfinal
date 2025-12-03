@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 export const dynamic = "force-dynamic";
@@ -101,8 +100,6 @@ function CSVDownloadButton({ rows }: { rows: BrandApplicationRow[] }) {
 }
 
 export default function DeveloperPartnerApplicationsPage() {
-  const router = useRouter();
-
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [userEmail, setUserEmail] = useState<string>("");
