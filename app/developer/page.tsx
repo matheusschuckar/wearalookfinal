@@ -524,8 +524,8 @@ function DevHomeInner() {
           </div>
         </Card>
 
-        {/* GERENCIAR BANNERS (apenas CTA) */}
-        <Card className="md:col-span-2">
+        {/* GERENCIAR BANNERS (agora ocupa somente 1 coluna) */}
+        <Card className="md:col-span-1">
           <h2 className="text-[20px] font-semibold text-black">Gerenciar Home (Banners)</h2>
           <p className="mt-1 text-sm text-neutral-600 leading-relaxed">
             Edite carrossel, editorial tall e selection hero por cidade.
@@ -539,6 +539,23 @@ function DevHomeInner() {
             </button>
           </div>
         </Card>
+
+        {/* NOVOS PARCEIROS (novo card ao lado de Banners) */}
+        <Card className="md:col-span-1">
+          <h2 className="text-[20px] font-semibold text-black">Novos parceiros</h2>
+          <p className="mt-1 text-sm text-neutral-600 leading-relaxed">
+            Acompanhe as inscrições recebidas pelas marcas. Revisões editoriais e exportação rápida.
+          </p>
+          <div className="mt-7">
+            <button
+              onClick={() => router.push('/developer/novos-parceiros')}
+              className="inline-flex h-11 items-center justify-center rounded-full bg-black px-6 text-sm font-medium text-white shadow-md hover:opacity-90 active:scale-[0.98] transition"
+            >
+              Ver inscrições
+            </button>
+          </div>
+        </Card>
+
       </div>
     </main>
   );
