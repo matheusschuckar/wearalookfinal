@@ -19,8 +19,8 @@ type StoreRow = {
   slug: string | null;
 };
 
-// Agora só A | B — marca não cria cupom para outras marcas aqui
-type CouponKind = "A" | "B";
+// marcas só podem criar estes 3 kinds
+type CouponKind = "A" | "B" | "C";
 type DiscountType = "percent" | "fixed";
 
 type NewCouponRow = {
@@ -118,10 +118,15 @@ function ProductPickerModal({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[60] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-5xl rounded-3xl bg-white border border-neutral-200 shadow-2xl flex flex-col overflow-hidden" style={{ maxHeight: "calc(100vh - 32px)" }}>
+      <div
+        className="w-full max-w-5xl rounded-3xl bg-white border border-neutral-200 shadow-2xl flex flex-col overflow-hidden"
+        style={{ maxHeight: "calc(100vh - 32px)" }}
+      >
         <div className="px-6 py-4 border-b border-neutral-200 flex items-center justify-between">
           <div className="font-semibold">{title}</div>
-          <button onClick={onClose} className="text-sm px-3 py-1 rounded-full border border-neutral-300 hover:bg-neutral-50">Fechar</button>
+          <button onClick={onClose} className="text-sm px-3 py-1 rounded-full border border-neutral-300 hover:bg-neutral-50">
+            Fechar
+          </button>
         </div>
 
         <div className="p-4 flex items-center gap-3">
@@ -138,7 +143,11 @@ function ProductPickerModal({
                 const url = firstImageUrl(r.photo_url);
                 const active = selected.includes(r.id);
                 return (
-                  <button key={r.id} onClick={() => toggle(r.id)} className={classNames("group text-left rounded-xl border overflow-hidden", active ? "border-black ring-2 ring-black/20" : "border-neutral-200 hover:border-neutral-300")}>
+                  <button
+                    key={r.id}
+                    onClick={() => toggle(r.id)}
+                    className={classNames("group text-left rounded-xl border overflow-hidden", active ? "border-black ring-2 ring-black/20" : "border-neutral-200 hover:border-neutral-300")}
+                  >
                     <div className="aspect-[4/5] bg-neutral-100">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       {url ? <img src={url} alt={r.name} className="w-full h-full object-cover" /> : null}
@@ -239,6 +248,8 @@ export default function CouponsPage() {
     if (!isFinite(valNum) || valNum <= 0) return setNotice("Insira um valor de desconto válido.");
     if (!["percent", "fixed"].includes(discountType)) return setNotice("Tipo de desconto inválido.");
 
+    // rules for kinds: A = single-use per CPF, B = first-order, C = unlimited (brand-wide)
+    // if A (single-use) we keep max_uses null and rely on redemptions per CPF; for C you can set max_uses or leave null (unlimited)
     setSaving(true);
     try {
       // prepara payload com tipo explícito
@@ -250,40 +261,46 @@ export default function CouponsPage() {
         coupon_kind: couponKind,
         created_by: `brand:${store.id}`,
         active,
-        max_uses: maxUses.trim() ? Number(maxUses) : null,
+        max_uses: max_uses_or_null(maxUses, couponKind),
         expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
       };
 
       // inserir cupom (sem generic) e extrair o registro inserido de forma segura
-      const { data: insData, error: insErr } = await supabase
-        .from("coupons")
-        .insert([couponRow])
-        .select();
-
+      const { data: insData, error: insErr } = await supabase.from("coupons").insert([couponRow]).select();
       if (insErr) throw insErr;
 
       // insData pode ser um array; pega o primeiro elemento (registro criado)
-      const inserted = (Array.isArray(insData) ? insData[0] : insData) as { id?: string } | null;
-      const couponId = inserted?.id;
+      const inserted = Array.isArray(insData) ? insData[0] : insData;
+      const couponId = (inserted as { id?: string } | null)?.id;
       if (!couponId) throw new Error("ID do cupom não retornado.");
 
-      // se aplicável: gravar coupon_applicabilities (produto por produto)
-      if (!applyToAll) {
-        // limpa antigas (se houver)
-        await supabase.from("coupon_applicabilities").delete().eq("coupon_id", couponId);
+      // --- gravar coupon_applicabilities (marca inteira ou produtos específicos) ---
+      // limpa antigas (se houver)
+      await supabase.from("coupon_applicabilities").delete().eq("coupon_id", couponId);
 
+      if (!applyToAll) {
+        // Produtos selecionados: grava product_id por linha
         if (selectedProductIds.length) {
           const rows = selectedProductIds.map((pid, i) => ({
             coupon_id: couponId,
             product_id: pid,
+            brand_id: null,
             sort_order: i,
           }));
           const { error: apErr } = await supabase.from("coupon_applicabilities").insert(rows);
           if (apErr) throw apErr;
         }
       } else {
-        // se applyToAll, garantimos que não existam linhas antigas
-        await supabase.from("coupon_applicabilities").delete().eq("coupon_id", couponId);
+        // Todos os produtos da marca: grava uma única linha com brand_id = store.id
+        const rows = [
+          {
+            coupon_id: couponId,
+            brand_id: store.id,
+            product_id: null,
+          },
+        ];
+        const { error: apErr } = await supabase.from("coupon_applicabilities").insert(rows);
+        if (apErr) throw apErr;
       }
 
       setNotice("Cupom criado com sucesso.");
@@ -302,6 +319,17 @@ export default function CouponsPage() {
       setSaving(false);
     }
   };
+
+  // helper para max_uses: se campo vazio => null; se kind A (single-use) devolve null (vamos controlar por CPF); caso contrário usa o valor informado
+  function max_uses_or_null(v: string, kind: CouponKind): number | null {
+    const t = v.trim();
+    if (!t) return null;
+    const n = Number(t);
+    if (!isFinite(n) || n <= 0) return null;
+    // se kind A queremos que seja controlado por CPF (uso único) — devolve null
+    if (kind === "A") return null;
+    return Math.floor(n);
+  }
 
   if (loading) {
     return <main className="min-h-screen p-8">Carregando…</main>;
@@ -366,13 +394,17 @@ export default function CouponsPage() {
               <label className="text-[12px] font-medium text-neutral-700 mb-1.5 block">Kind</label>
               <select value={couponKind} onChange={(e) => setCouponKind(e.target.value as CouponKind)} className="w-full rounded-xl border border-neutral-300 h-10 px-3 text-sm">
                 <option value="A">A — uso único por CPF</option>
-                <option value="B">B — global / primeiro pedido</option>
+                <option value="B">B — primeiro pedido</option>
+                <option value="C">C — uso ilimitado</option>
               </select>
             </div>
 
             <div>
               <label className="text-[12px] font-medium text-neutral-700 mb-1.5 block">Máximo de usos (opcional)</label>
               <input value={maxUses} onChange={(e) => setMaxUses(e.target.value)} className="w-full rounded-xl border border-neutral-300 h-10 px-3 text-sm" placeholder="Ex.: 100" />
+              <div className="text-[11px] text-neutral-500 mt-1">
+                Para kind A (uso único por CPF) este campo é ignorado (controle por CPF). Para B/C pode ser usado para limitar usos totais.
+              </div>
             </div>
 
             <div>
@@ -403,6 +435,9 @@ export default function CouponsPage() {
                   <div className="text-[12px] text-neutral-500">Selecionados: {selectedProductIds.length}</div>
                 </>
               )}
+            </div>
+            <div className="text-[11px] text-neutral-500 mt-3">
+              Quando escolher "Todos os produtos", o cupom valerá apenas para os produtos desta marca (inserimos um registro em coupon_applicabilities com brand_id = sua loja).
             </div>
           </div>
         </div>
