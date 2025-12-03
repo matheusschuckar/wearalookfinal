@@ -253,18 +253,17 @@ export default function CouponsPage() {
         expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
       };
 
-      // inserir cupom (tipando o retorno para conter id)
-      const { data: ins, error: insErr } = await supabase
-        .from<{ id: string }>("coupons")
+      // inserir cupom (sem generic) e extrair o registro inserido de forma segura
+      const { data: insData, error: insErr } = await supabase
+        .from("coupons")
         .insert([couponRow])
-        .select()
-        .single();
+        .select();
 
-      if (insErr) {
-        throw insErr;
-      }
+      if (insErr) throw insErr;
 
-      const couponId = ins.id;
+      // insData pode ser um array; pega o primeiro elemento (registro criado)
+      const inserted = (Array.isArray(insData) ? insData[0] : insData) as { id?: string } | null;
+      const couponId = inserted?.id;
       if (!couponId) throw new Error("ID do cupom não retornado.");
 
       // se aplicável: gravar coupon_applicabilities (produto por produto)
