@@ -1,3 +1,4 @@
+// app/developer/cupons/gerenciar/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -29,7 +30,7 @@ export default function DeveloperCouponsManagePage() {
   const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // fetch all coupons (developer view)
+  // fetch coupons created by "look" only
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -53,14 +54,12 @@ export default function DeveloperCouponsManagePage() {
               "created_at",
             ].join(",")
           )
+          .eq("created_by", "look") // <-- filtro para mostrar apenas cupons da Look
           .order("created_at", { ascending: false });
 
-        // supabase-js returns shape unknown; normalize safely
         const data = (resp as unknown as { data: unknown[] | null; error: unknown | null }).data;
         const error = (resp as unknown as { data: unknown[] | null; error: unknown | null }).error;
-        if (error) {
-          throw error;
-        }
+        if (error) throw error;
 
         const arr = Array.isArray(data) ? data : [];
         const mapped: CouponRow[] = arr.map((it) => {
@@ -114,13 +113,15 @@ export default function DeveloperCouponsManagePage() {
         console.warn("Failed deleting applicabilities", (delApp as unknown as { error?: unknown }).error);
       }
 
-      // delete coupon row
-      const delCoupon = await supabase.from("coupons").delete().eq("id", id);
+      // delete coupon row (no filter here because we already only list look-created coupons,
+      // but we can keep an extra safety filter created_by = 'look')
+      const delCoupon = await supabase.from("coupons").delete().eq("id", id).eq("created_by", "look");
       const delErr = (delCoupon as unknown as { error?: unknown }).error;
-      if (delErr) throw delErr;
+      if (delErr) {
+        throw delErr;
+      }
 
       setNotice("Cupom excluído com sucesso.");
-      // remove from UI
       setRows((prev) => prev.filter((r) => r.id !== id));
     } catch (err) {
       console.error("delete err:", err);
@@ -147,9 +148,9 @@ export default function DeveloperCouponsManagePage() {
       <div className="mx-auto max-w-6xl">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-semibold">Lista de cupons</h1>
+            <h1 className="text-2xl font-semibold">Lista de cupons — Look</h1>
             <div className="text-sm text-neutral-600 mt-1">
-              Todos os cupons ({totalCount}) — developer view
+              Apenas cupons criados pela Look ({totalCount})
             </div>
           </div>
 
@@ -189,7 +190,6 @@ export default function DeveloperCouponsManagePage() {
                       <th className="px-3 py-2">Kind</th>
                       <th className="px-3 py-2">Validade</th>
                       <th className="px-3 py-2">Ativo</th>
-                      <th className="px-3 py-2">Criado por</th>
                       <th className="px-3 py-2">Criado em</th>
                       <th className="px-3 py-2">Ações</th>
                     </tr>
@@ -206,7 +206,6 @@ export default function DeveloperCouponsManagePage() {
                         <td className="px-3 py-3">{r.coupon_kind ?? "—"}</td>
                         <td className="px-3 py-3">{r.expires_at ? new Date(r.expires_at).toLocaleDateString() : "—"}</td>
                         <td className="px-3 py-3">{r.active ? "Sim" : "Não"}</td>
-                        <td className="px-3 py-3">{r.created_by ?? "—"}</td>
                         <td className="px-3 py-3">{r.created_at ? new Date(r.created_at).toLocaleString() : "—"}</td>
                         <td className="px-3 py-3">
                           <div className="flex gap-2">
