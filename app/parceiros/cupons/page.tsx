@@ -19,7 +19,8 @@ type StoreRow = {
   slug: string | null;
 };
 
-type CouponKind = "A" | "B" | "C" | "D";
+// Agora só A | B — marca não cria cupom para outras marcas aqui
+type CouponKind = "A" | "B";
 type DiscountType = "percent" | "fixed";
 
 type NewCouponRow = {
@@ -366,8 +367,6 @@ export default function CouponsPage() {
               <select value={couponKind} onChange={(e) => setCouponKind(e.target.value as CouponKind)} className="w-full rounded-xl border border-neutral-300 h-10 px-3 text-sm">
                 <option value="A">A — uso único por CPF</option>
                 <option value="B">B — global / primeiro pedido</option>
-                <option value="C">C — brand-specific</option>
-                <option value="D">D — produto específico</option>
               </select>
             </div>
 
