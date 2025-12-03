@@ -165,7 +165,8 @@ export default function DeveloperPartnerApplicationsPage() {
   const fetchRows = async () => {
     setRefreshing(true);
     try {
-      let queryBuilder = supabase.from<BrandApplicationRow>("brand_applications").select("*").order("id", { ascending: false }).limit(1000);
+      // remove explicit generic to avoid TypeScript mismatch across supabase client versions
+      let queryBuilder = supabase.from("brand_applications").select("*").order("id", { ascending: false }).limit(1000);
       if (startIso) {
         queryBuilder = queryBuilder.gte("created_at", startIso);
       }
