@@ -193,7 +193,12 @@ export default function ManageCouponsPage() {
           .range(from, to);
 
         if (error) throw error;
-        if (!cancelled) setRows((data as CouponRow[]) || []);
+
+        // SAFETY: data can be GenericStringError[] in some supabase-js typings.
+        // - verificamos se é array e então fazemos um cast seguro via unknown.
+        // - assim o TypeScript não reclama e a runtime continua segura.
+        const rowsData: CouponRow[] = Array.isArray(data) ? (data as unknown as CouponRow[]) : [];
+        if (!cancelled) setRows(rowsData);
       } catch (err) {
         console.error("[parceiros/cupons/gerenciar] fetch err:", err);
         if (!cancelled) setNotice("Erro ao buscar cupons.");
