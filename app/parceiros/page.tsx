@@ -689,6 +689,35 @@ function PartnerHomeInner() {
             </button>
           </div>
         </Card>
+
+        {/* Cupons (NOVO) */}
+        <Card>
+          <h2 className="text-[20px] font-semibold text-black">Cupons</h2>
+          <p className="mt-1 text-sm text-neutral-600 leading-relaxed">
+            Crie códigos promocionais e gerencie os cupons da sua marca.
+            Use criar para gerar cupons que podem ser globals, por marca ou por produto.
+          </p>
+
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              onClick={() => router.push("/parceiros/cupons")}
+              className="inline-flex h-11 min-w-[150px] items-center justify-center rounded-full bg-black px-6 text-sm font-medium text-white shadow-md hover:opacity-90 active:scale-[0.98] transition"
+            >
+              Criar cupom
+            </button>
+
+            <button
+              onClick={() => router.push("/parceiros/cupons/gerenciar")}
+              className="inline-flex h-11 min-w-[150px] items-center justify-center rounded-full border border-neutral-300/70 bg-white/70 px-6 text-sm font-medium text-neutral-900 hover:bg-white"
+            >
+              Gerenciar cupons
+            </button>
+          </div>
+
+          <div className="mt-4 text-xs text-neutral-500">
+            Observação: a página de gerenciamento mostra apenas cupons criados pela sua marca. Cupons criados pela Look não aparecem aqui.
+          </div>
+        </Card>
         {/* ===== FIM DOS NOVOS CARDS ===== */}
       </div>
     </main>
