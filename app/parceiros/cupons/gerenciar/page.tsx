@@ -151,7 +151,7 @@ export default function ManageCouponsPage() {
       try {
         // count total (supabase supports select with count)
         const countRes = await supabase
-          .from<CouponRow>("coupons")
+          .from("coupons")
           .select("id", {
             count: "exact",
             head: false,
@@ -171,7 +171,7 @@ export default function ManageCouponsPage() {
         const to = from + PAGE_SIZE - 1;
 
         const { data, error } = await supabase
-          .from<CouponRow>("coupons")
+          .from("coupons")
           .select(
             [
               "id",
