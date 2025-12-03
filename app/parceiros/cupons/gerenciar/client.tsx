@@ -19,10 +19,13 @@ type CouponRow = {
   created_at?: string | null;
 };
 
-// pequenos tipos locais para modelar respostas do supabase sem usar `any`
-type SupabaseMaybeSingle<T> = { data: T | null; error: unknown } | { data: null; error: unknown };
-type SupabaseSelectCountResp = { data: unknown[] | null; error: unknown | null; count?: number | null };
-type SupabaseResp = { data: unknown | null; error: unknown | null };
+// tipos locais para normalizar respostas do supabase sem usar `any`
+type MaybeSingleResp<T> = { data: T | null; error: unknown } | { data: null; error: unknown };
+type SelectCountResp = { data: unknown[] | null; error: unknown | null; count?: number | null };
+type GenericResp = { data: unknown | null; error: unknown | null };
+
+// formato de retorno de getSession (só pegamos email)
+type SessionResp = { data?: { session?: { user?: { email?: string } } } ; error?: unknown };
 
 export default function ManageCouponsPage() {
   const router = useRouter();
@@ -51,20 +54,20 @@ export default function ManageCouponsPage() {
     (async () => {
       setLoading(true);
       try {
-        const sess = await supabase.auth.getSession();
-        const user = sess?.data?.session?.user ?? (sess as any)?.session?.user; // permissive read
-        if (!user?.email) {
+        const sessRaw = await supabase.auth.getSession();
+        const sess = sessRaw as unknown as SessionResp;
+        const userEmail = sess?.data?.session?.user?.email;
+        if (!userEmail) {
           router.replace("/parceiros/login");
           return;
         }
-        const userEmail = (user.email as string).toLowerCase();
+        const emailLower = userEmail.toLowerCase();
 
         // verify partner allowed (rpc)
-        const rpc = await supabase.rpc("partner_email_allowed", { p_email: userEmail });
-        const rpcAllowed = (rpc as unknown as { data?: boolean; error?: unknown }).data;
-        const rpcErr = (rpc as unknown as { data?: boolean; error?: unknown }).error;
-        if (rpcErr) throw rpcErr;
-        if (!rpcAllowed) {
+        const rpcRaw = await supabase.rpc("partner_email_allowed", { p_email: emailLower });
+        const rpc = rpcRaw as unknown as { data?: boolean; error?: unknown };
+        if (rpc.error) throw rpc.error;
+        if (!rpc.data) {
           await supabase.auth.signOut({ scope: "local" });
           router.replace("/parceiros/login");
           return;
@@ -74,15 +77,13 @@ export default function ManageCouponsPage() {
         const peRaw = await supabase
           .from("partner_emails")
           .select("store_name")
-          .eq("email", userEmail)
+          .eq("email", emailLower)
           .eq("active", true)
           .maybeSingle();
 
-        // peRaw has shape returned by supabase-js; normalize safely
-        const pe = (peRaw as unknown as SupabaseMaybeSingle<{ store_name?: string }>);
-        const peErr = pe?.error;
-        if (peErr) throw peErr;
-        const sname = (pe as any)?.data ? (pe as any).data.store_name || "" : "";
+        const pe = peRaw as unknown as MaybeSingleResp<{ store_name?: string }>;
+        if (pe.error) throw pe.error;
+        const sname = pe.data?.store_name ?? "";
 
         if (!cancelled) setStoreName(sname);
 
@@ -93,12 +94,11 @@ export default function ManageCouponsPage() {
             .eq("store_name", sname)
             .maybeSingle();
 
-          const srow = srowRaw as unknown as SupabaseMaybeSingle<{ id?: number; store_name?: string }>;
-          const srowErr = srow?.error;
-          if (srowErr) {
+          const srow = srowRaw as unknown as MaybeSingleResp<{ id?: number; store_name?: string }>;
+          if (srow.error) {
             if (!cancelled) setStoreId(null);
           } else {
-            const sid = srow && (srow as any).data ? (srow as any).data.id : null;
+            const sid = srow.data?.id ?? null;
             if (!cancelled) setStoreId(typeof sid === "number" ? sid : null);
           }
         } else if (!cancelled) {
@@ -138,7 +138,7 @@ export default function ManageCouponsPage() {
           .eq("created_by", `brand:${storeId}`)
           .neq("created_by", "look");
 
-        const countResp = countRaw as unknown as SupabaseSelectCountResp;
+        const countResp = countRaw as unknown as SelectCountResp;
         if (countResp.error) {
           console.warn("count err", countResp.error);
           if (!cancelled) setTotalCount(null);
@@ -150,7 +150,7 @@ export default function ManageCouponsPage() {
         const from = page * PAGE_SIZE;
         const to = from + PAGE_SIZE - 1;
 
-        const pageResp = await supabase
+        const pageRaw = await supabase
           .from("coupons")
           .select(
             [
@@ -172,10 +172,10 @@ export default function ManageCouponsPage() {
           .order("created_at", { ascending: false })
           .range(from, to);
 
-        const pageData = pageResp as unknown as { data: unknown[] | null; error: unknown | null };
-        if (pageData.error) throw pageData.error;
+        const pageResp = pageRaw as unknown as { data: unknown[] | null; error: unknown | null };
+        if (pageResp.error) throw pageResp.error;
 
-        const arr = Array.isArray(pageData.data) ? pageData.data : [];
+        const arr = Array.isArray(pageResp.data) ? pageResp.data : [];
         // map the unknown elements to CouponRow conservatively
         const mapped: CouponRow[] = arr.map((it) => {
           const obj = it as Record<string, unknown>;
@@ -184,11 +184,19 @@ export default function ManageCouponsPage() {
             code: String(obj["code"] ?? ""),
             description: obj["description"] == null ? null : String(obj["description"]),
             discount_type: String(obj["discount_type"] ?? ""),
-            discount_value: typeof obj["discount_value"] === "number" ? (obj["discount_value"] as number) : Number(obj["discount_value"] ?? 0),
+            discount_value:
+              typeof obj["discount_value"] === "number"
+                ? (obj["discount_value"] as number)
+                : Number(obj["discount_value"] ?? 0),
             coupon_kind: String(obj["coupon_kind"] ?? ""),
             created_by: obj["created_by"] == null ? null : String(obj["created_by"]),
             active: Boolean(obj["active"]),
-            max_uses: obj["max_uses"] == null ? null : (typeof obj["max_uses"] === "number" ? (obj["max_uses"] as number) : Number(obj["max_uses"])),
+            max_uses:
+              obj["max_uses"] == null
+                ? null
+                : typeof obj["max_uses"] === "number"
+                ? (obj["max_uses"] as number)
+                : Number(obj["max_uses"]),
             expires_at: obj["expires_at"] == null ? null : String(obj["expires_at"]),
             created_at: obj["created_at"] == null ? null : String(obj["created_at"]),
           };
@@ -218,7 +226,7 @@ export default function ManageCouponsPage() {
     try {
       // 1) delete coupon_applicabilities for coupon_id (best-effort)
       const delAppRaw = await supabase.from("coupon_applicabilities").delete().eq("coupon_id", id);
-      const delApp = delAppRaw as unknown as SupabaseResp;
+      const delApp = delAppRaw as unknown as GenericResp;
       if (delApp.error) {
         console.warn("failed to delete applicabilities:", delApp.error);
       }
@@ -229,7 +237,7 @@ export default function ManageCouponsPage() {
         .delete()
         .eq("id", id)
         .eq("created_by", `brand:${storeId}`);
-      const delCoupon = delCouponRaw as unknown as SupabaseResp;
+      const delCoupon = delCouponRaw as unknown as GenericResp;
       if (delCoupon.error) {
         throw delCoupon.error;
       }
