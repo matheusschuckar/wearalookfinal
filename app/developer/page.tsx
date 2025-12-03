@@ -556,6 +556,50 @@ function DevHomeInner() {
           </div>
         </Card>
 
+        {/* ====== NOVO: Cupons (retângulos) ====== */}
+        <Card className="md:col-span-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-[20px] font-semibold text-black">Cupons</h2>
+              <p className="mt-1 text-sm text-neutral-600 leading-relaxed">
+                Crie e gerencie cupons — crie descontos rapidamente ou acesse a lista para excluir.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button
+              onClick={() => router.push('/developer/cupom')}
+              className="group w-full rounded-2xl p-6 border border-neutral-200 flex items-center gap-4 text-left hover:shadow-md transition"
+              style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.9), rgba(250,250,250,0.85))' }}
+            >
+              <div className="flex-1">
+                <div className="text-sm text-neutral-500">Criar cupom</div>
+                <div className="mt-2 text-lg font-semibold text-black">Novo cupom</div>
+                <div className="mt-3 text-xs text-neutral-600">Abra o formulário para criar um cupom com regras avançadas.</div>
+              </div>
+              <div className="ml-4 flex items-center">
+                <div className="h-10 w-10 rounded-xl bg-black flex items-center justify-center text-white">＋</div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => router.push('/developer/cupons/gerenciar')}
+              className="group w-full rounded-2xl p-6 border border-neutral-200 flex items-center gap-4 text-left hover:shadow-md transition"
+              style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.9), rgba(250,250,250,0.85))' }}
+            >
+              <div className="flex-1">
+                <div className="text-sm text-neutral-500">Gerenciar cupons</div>
+                <div className="mt-2 text-lg font-semibold text-black">Lista de cupons</div>
+                <div className="mt-3 text-xs text-neutral-600">Acesse a lista dos cupons criados para editar ou excluir (em desenvolvimento).</div>
+              </div>
+              <div className="ml-4 flex items-center">
+                <div className="h-10 w-10 rounded-xl border border-neutral-200 flex items-center justify-center text-neutral-700">→</div>
+              </div>
+            </button>
+          </div>
+        </Card>
+
       </div>
     </main>
   );
