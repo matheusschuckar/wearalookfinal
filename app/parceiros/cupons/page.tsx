@@ -437,8 +437,9 @@ export default function CouponsPage() {
               )}
             </div>
             <div className="text-[11px] text-neutral-500 mt-3">
-              Quando escolher "Todos os produtos", o cupom valerá apenas para os produtos desta marca (inserimos um registro em coupon_applicabilities com brand_id = sua loja).
-            </div>
+                Quando escolher &quot;Todos os produtos&quot;, o cupom valerá apenas para os produtos desta marca
+  (inserimos um registro em coupon_applicabilities com brand_id = sua loja).
+</div>
           </div>
         </div>
 
