@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -20,10 +19,10 @@ type CouponRow = {
   created_at?: string | null;
 };
 
-/* Tipagens auxiliares para normalizar respostas do supabase sem usar `any` */
-type SupabaseMaybeSingle<T> = { data: T | null; error: unknown } | { data: null; error: unknown };
-type SupabaseSelectCountResp = { data: unknown[] | null; error: unknown | null; count?: number | null };
-type SupabaseResp = { data: unknown | null; error: unknown | null };
+/* Respostas supabase tipadas de forma segura */
+type RpcBoolResp = { data: boolean | null; error: unknown | null };
+type SelectCountResp = { data: unknown[] | null; error: unknown | null; count?: number | null };
+type GenericResp<T> = { data: T | null; error: unknown | null };
 
 export default function ManageCouponsClient() {
   const router = useRouter();
@@ -31,9 +30,7 @@ export default function ManageCouponsClient() {
   const qStoreId = search?.get("storeId");
 
   const [loading, setLoading] = useState<boolean>(true);
-  const [storeId, setStoreId] = useState<number | null>(
-    qStoreId ? Number(qStoreId) || null : null
-  );
+  const [storeId, setStoreId] = useState<number | null>(qStoreId ? Number(qStoreId) || null : null);
   const [storeName, setStoreName] = useState<string>("");
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -52,51 +49,48 @@ export default function ManageCouponsClient() {
     (async () => {
       setLoading(true);
       try {
+        // supabase-js v2: getSession() -> { data: { session }, error }
         const sess = await supabase.auth.getSession();
-        // supabase-js v2 retorna { data: { session }, error } - garantimos leitura segura
-        const user = (sess as any)?.data?.session?.user ?? (sess as any)?.session?.user ?? null;
+        const session = sess?.data?.session ?? null;
+        const user = session?.user ?? null;
+
         if (!user?.email) {
           router.replace("/parceiros/login");
           return;
         }
         const userEmail = String(user.email).toLowerCase();
 
-        // rpc partner_email_allowed
-        const rpcRaw = await supabase.rpc("partner_email_allowed", { p_email: userEmail });
-        const rpcObj = rpcRaw as unknown as { data?: boolean; error?: unknown };
-        if (rpcObj.error) throw rpcObj.error;
-        if (!rpcObj.data) {
+        // rpc partner_email_allowed (usando generic de resposta)
+        const rpcRaw = (await supabase.rpc("partner_email_allowed", { p_email: userEmail })) as RpcBoolResp;
+        if (rpcRaw.error) throw rpcRaw.error;
+        if (!rpcRaw.data) {
           await supabase.auth.signOut({ scope: "local" });
           router.replace("/parceiros/login");
           return;
         }
 
-        // pega store_name do partner_emails
-        const peRaw = await supabase
-          .from("partner_emails")
+        // pega store_name do partner_emails (tipado via generic)
+        const peRaw = (await supabase
+          .from<{ store_name?: string }>("partner_emails")
           .select("store_name")
           .eq("email", userEmail)
           .eq("active", true)
-          .maybeSingle();
-
-        const pe = peRaw as unknown as SupabaseMaybeSingle<{ store_name?: string }>;
-        if ((pe as any)?.error) throw (pe as any).error;
-        const sname = (pe as any)?.data?.store_name ?? "";
+          .maybeSingle()) as GenericResp<{ store_name?: string }>;
+        if (peRaw.error) throw peRaw.error;
+        const sname = peRaw.data?.store_name ?? "";
 
         if (!cancelled) setStoreName(String(sname ?? ""));
 
         if (sname) {
-          const srowRaw = await supabase
-            .from("stores")
+          const srowRaw = (await supabase
+            .from<{ id?: number; store_name?: string }>("stores")
             .select("id,store_name")
             .eq("store_name", sname)
-            .maybeSingle();
-
-          const srow = srowRaw as unknown as SupabaseMaybeSingle<{ id?: number; store_name?: string }>;
-          if ((srow as any)?.error) {
+            .maybeSingle()) as GenericResp<{ id?: number; store_name?: string }>;
+          if (srowRaw.error) {
             if (!cancelled) setStoreId(null);
           } else {
-            const sid = (srow as any)?.data?.id ?? null;
+            const sid = srowRaw.data?.id ?? null;
             if (!cancelled) setStoreId(typeof sid === "number" ? sid : null);
           }
         } else if (!cancelled) {
@@ -129,26 +123,25 @@ export default function ManageCouponsClient() {
       setNotice(null);
 
       try {
-        // 1) count total
-        const countRaw = await supabase
+        // 1) count total (tipado)
+        const countRaw = (await supabase
           .from("coupons")
           .select("id", { count: "exact", head: false })
           .eq("created_by", `brand:${storeId}`)
-          .neq("created_by", "look");
+          .neq("created_by", "look")) as SelectCountResp;
 
-        const countResp = countRaw as unknown as SupabaseSelectCountResp;
-        if (countResp.error) {
-          console.warn("count err", countResp.error);
+        if (countRaw.error) {
+          console.warn("count err", countRaw.error);
           if (!cancelled) setTotalCount(null);
         } else {
-          if (!cancelled) setTotalCount(typeof countResp.count === "number" ? countResp.count : null);
+          if (!cancelled) setTotalCount(typeof countRaw.count === "number" ? countRaw.count : null);
         }
 
         // 2) pagina de dados
         const from = page * PAGE_SIZE;
         const to = from + PAGE_SIZE - 1;
 
-        const pageResp = await supabase
+        const pageResp = (await supabase
           .from("coupons")
           .select(
             [
@@ -168,12 +161,11 @@ export default function ManageCouponsClient() {
           .eq("created_by", `brand:${storeId}`)
           .neq("created_by", "look")
           .order("created_at", { ascending: false })
-          .range(from, to);
+          .range(from, to)) as GenericResp<unknown[]>;
 
-        const pageData = pageResp as unknown as { data: unknown[] | null; error: unknown | null };
-        if (pageData.error) throw pageData.error;
+        if (pageResp.error) throw pageResp.error;
 
-        const arr = Array.isArray(pageData.data) ? pageData.data : [];
+        const arr = Array.isArray(pageResp.data) ? pageResp.data : [];
         const mapped: CouponRow[] = arr.map((it) => {
           const obj = it as Record<string, unknown>;
           return {
@@ -223,21 +215,19 @@ export default function ManageCouponsClient() {
     setActionLoading(true);
     try {
       // delete applicabilities (best-effort)
-      const delAppRaw = await supabase.from("coupon_applicabilities").delete().eq("coupon_id", id);
-      const delApp = delAppRaw as unknown as SupabaseResp;
-      if (delApp.error) {
-        console.warn("failed to delete applicabilities:", delApp.error);
+      const delAppRaw = (await supabase.from("coupon_applicabilities").delete().eq("coupon_id", id)) as GenericResp<null>;
+      if (delAppRaw.error) {
+        console.warn("failed to delete applicabilities:", delAppRaw.error);
       }
 
       // delete coupon row (só se for created_by brand:<storeId>)
-      const delCouponRaw = await supabase
+      const delCouponRaw = (await supabase
         .from("coupons")
         .delete()
         .eq("id", id)
-        .eq("created_by", `brand:${storeId}`);
-      const delCoupon = delCouponRaw as unknown as SupabaseResp;
-      if (delCoupon.error) {
-        throw delCoupon.error;
+        .eq("created_by", `brand:${storeId}`)) as GenericResp<null>;
+      if (delCouponRaw.error) {
+        throw delCouponRaw.error;
       }
 
       setNotice("Cupom excluído com sucesso.");
