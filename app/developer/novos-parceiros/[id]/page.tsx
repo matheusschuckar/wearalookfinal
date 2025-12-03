@@ -2,10 +2,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-
-export const dynamic = "force-dynamic";
 
 type BrandApplicationRow = {
   id: number;
@@ -38,9 +36,11 @@ function StatusBadge({ s }: { s?: string | null }) {
   return <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] bg-neutral-100 text-neutral-700 border border-neutral-200">{status}</span>;
 }
 
-export default function PartnerApplicationDetail({ params }: { params: { id: string } }) {
+export default function PartnerApplicationDetail() {
   const router = useRouter();
-  const id = Number(params.id);
+  const params = useParams();
+  const idStr = params?.id as string | undefined;
+  const id = idStr ? Number(idStr) : NaN;
 
   const [loading, setLoading] = useState(true);
   const [row, setRow] = useState<BrandApplicationRow | null>(null);
@@ -49,25 +49,30 @@ export default function PartnerApplicationDetail({ params }: { params: { id: str
 
   useEffect(() => {
     let mounted = true;
+    if (!idStr) {
+      setNotice("ID inválido.");
+      setLoading(false);
+      return;
+    }
     (async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase.from("brand_applications").select("*").eq("id", id).single();
+        const { data, error } = await supabase.from<BrandApplicationRow>("brand_applications").select("*").eq("id", id).single();
         if (error) {
           console.error("fetch single error", error);
-          setNotice("Não foi possível carregar a inscrição.");
+          if (mounted) setNotice("Não foi possível carregar a inscrição.");
           return;
         }
-        if (mounted) setRow((data as unknown) as BrandApplicationRow);
+        if (mounted) setRow(data ?? null);
       } catch (err) {
         console.error(err);
-        setNotice("Erro ao carregar inscrição.");
+        if (mounted) setNotice("Erro ao carregar inscrição.");
       } finally {
         if (mounted) setLoading(false);
       }
     })();
     return () => { mounted = false; };
-  }, [id]);
+  }, [id, idStr]);
 
   async function updateStatus(newStatus: "new" | "approved" | "rejected") {
     if (!row) return;
@@ -76,21 +81,19 @@ export default function PartnerApplicationDetail({ params }: { params: { id: str
     const prev = row.review_status ?? null;
     setRow({ ...row, review_status: newStatus });
     try {
-      const { data, error } = await supabase.from("brand_applications").update({ review_status: newStatus }).eq("id", id).select().single();
+      const { data, error } = await supabase
+        .from<BrandApplicationRow>("brand_applications")
+        .update({ review_status: newStatus })
+        .eq("id", row.id)
+        .select()
+        .single();
       if (error) {
         console.error("update error", error);
         setNotice("Não foi possível atualizar status. Verifique se a coluna review_status existe.");
-        // rollback
         setRow({ ...row, review_status: prev });
         return;
       }
-      const returned = (data as unknown) as BrandApplicationRow;
-      setRow((rPrev) => {
-        return {
-          ...(rPrev ?? {}),
-          ...returned,
-        } as BrandApplicationRow;
-      });
+      setRow(data ?? { ...row, review_status: newStatus });
     } catch (err) {
       console.error(err);
       setNotice("Erro ao atualizar status.");
