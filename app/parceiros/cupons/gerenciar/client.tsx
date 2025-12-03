@@ -71,11 +71,12 @@ export default function ManageCouponsClient() {
 
         // pega store_name do partner_emails (tipado via generic)
         const peRaw = (await supabase
-          .from<{ store_name?: string }>("partner_emails")
-          .select("store_name")
-          .eq("email", userEmail)
-          .eq("active", true)
-          .maybeSingle()) as GenericResp<{ store_name?: string }>;
+  .from("partner_emails")
+  .select("store_name")
+  .eq("email", userEmail)
+  .eq("active", true)
+  .maybeSingle()) as GenericResp<{ store_name?: string }>;
+
         if (peRaw.error) throw peRaw.error;
         const sname = peRaw.data?.store_name ?? "";
 
