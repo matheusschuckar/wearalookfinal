@@ -2,8 +2,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+
+export const dynamic = "force-dynamic";
 
 type BrandApplicationRow = {
   id: number;
@@ -56,7 +58,7 @@ export default function PartnerApplicationDetail({ params }: { params: { id: str
           setNotice("Não foi possível carregar a inscrição.");
           return;
         }
-        if (mounted) setRow(data as BrandApplicationRow);
+        if (mounted) setRow((data as unknown) as BrandApplicationRow);
       } catch (err) {
         console.error(err);
         setNotice("Erro ao carregar inscrição.");
@@ -82,7 +84,13 @@ export default function PartnerApplicationDetail({ params }: { params: { id: str
         setRow({ ...row, review_status: prev });
         return;
       }
-      setRow((r) => ({ ...(r as any), ...(data as any) } as BrandApplicationRow));
+      const returned = (data as unknown) as BrandApplicationRow;
+      setRow((rPrev) => {
+        return {
+          ...(rPrev ?? {}),
+          ...returned,
+        } as BrandApplicationRow;
+      });
     } catch (err) {
       console.error(err);
       setNotice("Erro ao atualizar status.");
