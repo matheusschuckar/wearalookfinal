@@ -83,11 +83,11 @@ export default function ManageCouponsClient() {
         if (!cancelled) setStoreName(String(sname ?? ""));
 
         if (sname) {
-          const srowRaw = (await supabase
-            .from<{ id?: number; store_name?: string }>("stores")
-            .select("id,store_name")
-            .eq("store_name", sname)
-            .maybeSingle()) as GenericResp<{ id?: number; store_name?: string }>;
+        const srowRaw = (await supabase
+  .from("stores")
+  .select("id,store_name")
+  .eq("store_name", sname)
+  .maybeSingle()) as GenericResp<{ id?: number; store_name?: string }>;
           if (srowRaw.error) {
             if (!cancelled) setStoreId(null);
           } else {
