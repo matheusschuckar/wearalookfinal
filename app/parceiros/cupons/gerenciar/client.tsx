@@ -19,6 +19,11 @@ type CouponRow = {
   created_at?: string | null;
 };
 
+// pequenos tipos locais para modelar respostas do supabase sem usar `any`
+type SupabaseMaybeSingle<T> = { data: T | null; error: unknown } | { data: null; error: unknown };
+type SupabaseSelectCountResp = { data: unknown[] | null; error: unknown | null; count?: number | null };
+type SupabaseResp = { data: unknown | null; error: unknown | null };
+
 export default function ManageCouponsPage() {
   const router = useRouter();
   const search = useSearchParams();
@@ -46,47 +51,55 @@ export default function ManageCouponsPage() {
     (async () => {
       setLoading(true);
       try {
-        const { data: sess } = await supabase.auth.getSession();
-        const user = sess?.session?.user;
+        const sess = await supabase.auth.getSession();
+        const user = sess?.data?.session?.user ?? (sess as any)?.session?.user; // permissive read
         if (!user?.email) {
           router.replace("/parceiros/login");
           return;
         }
-        const userEmail = user.email.toLowerCase();
+        const userEmail = (user.email as string).toLowerCase();
 
-        // verify partner allowed
-        const { data: allowed, error: allowedErr } = await supabase.rpc(
-          "partner_email_allowed",
-          { p_email: userEmail }
-        );
-        if (allowedErr) throw allowedErr;
-        if (!allowed) {
+        // verify partner allowed (rpc)
+        const rpc = await supabase.rpc("partner_email_allowed", { p_email: userEmail });
+        const rpcAllowed = (rpc as unknown as { data?: boolean; error?: unknown }).data;
+        const rpcErr = (rpc as unknown as { data?: boolean; error?: unknown }).error;
+        if (rpcErr) throw rpcErr;
+        if (!rpcAllowed) {
           await supabase.auth.signOut({ scope: "local" });
           router.replace("/parceiros/login");
           return;
         }
 
-        // resolve store_name from partner_emails and then store.id from stores table (simple flow)
-        const { data: pe, error: peErr } = await supabase
+        // resolve store_name from partner_emails (maybeSingle)
+        const peRaw = await supabase
           .from("partner_emails")
           .select("store_name")
           .eq("email", userEmail)
           .eq("active", true)
           .maybeSingle();
+
+        // peRaw has shape returned by supabase-js; normalize safely
+        const pe = (peRaw as unknown as SupabaseMaybeSingle<{ store_name?: string }>);
+        const peErr = pe?.error;
         if (peErr) throw peErr;
-        const sname = (pe as any)?.store_name || "";
+        const sname = (pe as any)?.data ? (pe as any).data.store_name || "" : "";
+
         if (!cancelled) setStoreName(sname);
 
         if (sname) {
-          const { data: srow, error: sErr } = await supabase
+          const srowRaw = await supabase
             .from("stores")
             .select("id,store_name")
             .eq("store_name", sname)
             .maybeSingle();
-          if (!sErr && srow && !cancelled) {
-            setStoreId((srow as any).id ?? null);
-          } else if (!cancelled) {
-            setStoreId(null);
+
+          const srow = srowRaw as unknown as SupabaseMaybeSingle<{ id?: number; store_name?: string }>;
+          const srowErr = srow?.error;
+          if (srowErr) {
+            if (!cancelled) setStoreId(null);
+          } else {
+            const sid = srow && (srow as any).data ? (srow as any).data.id : null;
+            if (!cancelled) setStoreId(typeof sid === "number" ? sid : null);
           }
         } else if (!cancelled) {
           setStoreId(null);
@@ -119,25 +132,25 @@ export default function ManageCouponsPage() {
 
       try {
         // 1) count total
-        const countRes = await supabase
+        const countRaw = await supabase
           .from("coupons")
           .select("id", { count: "exact", head: false })
           .eq("created_by", `brand:${storeId}`)
           .neq("created_by", "look");
 
-        // supabase-js may return shape { data, error, count }
-        if ((countRes as any).error) {
-          console.warn("count err", (countRes as any).error);
+        const countResp = countRaw as unknown as SupabaseSelectCountResp;
+        if (countResp.error) {
+          console.warn("count err", countResp.error);
           if (!cancelled) setTotalCount(null);
         } else {
-          if (!cancelled) setTotalCount(((countRes as any).count ?? null) as number | null);
+          if (!cancelled) setTotalCount(typeof countResp.count === "number" ? countResp.count : null);
         }
 
         // 2) page data
         const from = page * PAGE_SIZE;
         const to = from + PAGE_SIZE - 1;
 
-        const { data, error } = await supabase
+        const pageResp = await supabase
           .from("coupons")
           .select(
             [
@@ -159,10 +172,29 @@ export default function ManageCouponsPage() {
           .order("created_at", { ascending: false })
           .range(from, to);
 
-        if (error) throw error;
+        const pageData = pageResp as unknown as { data: unknown[] | null; error: unknown | null };
+        if (pageData.error) throw pageData.error;
 
-        const rowsData: CouponRow[] = Array.isArray(data) ? (data as unknown as CouponRow[]) : [];
-        if (!cancelled) setRows(rowsData);
+        const arr = Array.isArray(pageData.data) ? pageData.data : [];
+        // map the unknown elements to CouponRow conservatively
+        const mapped: CouponRow[] = arr.map((it) => {
+          const obj = it as Record<string, unknown>;
+          return {
+            id: String(obj["id"] ?? ""),
+            code: String(obj["code"] ?? ""),
+            description: obj["description"] == null ? null : String(obj["description"]),
+            discount_type: String(obj["discount_type"] ?? ""),
+            discount_value: typeof obj["discount_value"] === "number" ? (obj["discount_value"] as number) : Number(obj["discount_value"] ?? 0),
+            coupon_kind: String(obj["coupon_kind"] ?? ""),
+            created_by: obj["created_by"] == null ? null : String(obj["created_by"]),
+            active: Boolean(obj["active"]),
+            max_uses: obj["max_uses"] == null ? null : (typeof obj["max_uses"] === "number" ? (obj["max_uses"] as number) : Number(obj["max_uses"])),
+            expires_at: obj["expires_at"] == null ? null : String(obj["expires_at"]),
+            created_at: obj["created_at"] == null ? null : String(obj["created_at"]),
+          };
+        });
+
+        if (!cancelled) setRows(mapped);
       } catch (err) {
         console.error("[parceiros/cupons/gerenciar] fetch err:", err);
         if (!cancelled) setNotice("Erro ao buscar cupons.");
@@ -185,19 +217,21 @@ export default function ManageCouponsPage() {
     setActionLoading(true);
     try {
       // 1) delete coupon_applicabilities for coupon_id (best-effort)
-      const delApp = await supabase.from("coupon_applicabilities").delete().eq("coupon_id", id);
-      if ((delApp as any).error) {
-        console.warn("failed to delete applicabilities:", (delApp as any).error);
+      const delAppRaw = await supabase.from("coupon_applicabilities").delete().eq("coupon_id", id);
+      const delApp = delAppRaw as unknown as SupabaseResp;
+      if (delApp.error) {
+        console.warn("failed to delete applicabilities:", delApp.error);
       }
 
       // 2) delete coupon row (only if created_by brand:<storeId>)
-      const delCoupon = await supabase
+      const delCouponRaw = await supabase
         .from("coupons")
         .delete()
         .eq("id", id)
         .eq("created_by", `brand:${storeId}`);
-      if ((delCoupon as any).error) {
-        throw (delCoupon as any).error;
+      const delCoupon = delCouponRaw as unknown as SupabaseResp;
+      if (delCoupon.error) {
+        throw delCoupon.error;
       }
 
       setNotice("Cupom excluído com sucesso.");
@@ -206,7 +240,6 @@ export default function ManageCouponsPage() {
       if (remaining <= 0 && page > 0) {
         setPage((p) => p - 1);
       } else {
-        // re-trigger fetch by toggling page (same value is fine)
         setPage((p) => p);
       }
     } catch (err) {
