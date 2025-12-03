@@ -150,7 +150,7 @@ export default function ManageCouponsPage() {
 
       try {
         // count total (supabase supports select with count)
-        const { data: countData, error: countErr, count } = await supabase
+        const countRes = await supabase
           .from<CouponRow>("coupons")
           .select("id", {
             count: "exact",
@@ -159,11 +159,12 @@ export default function ManageCouponsPage() {
           .eq("created_by", `brand:${storeId}`)
           .neq("created_by", "look"); // redundant but explicit
 
-        if (countErr) {
-          console.warn("count err", countErr);
+        // use returned count if available
+        if (countRes.error) {
+          console.warn("count err", countRes.error);
           setTotalCount(null);
         } else {
-          setTotalCount(count ?? null);
+          setTotalCount(countRes.count ?? null);
         }
 
         const from = page * PAGE_SIZE;
@@ -235,9 +236,7 @@ export default function ManageCouponsPage() {
       if (remaining <= 0 && page > 0) {
         setPage((p) => p - 1);
       } else {
-        // refresh by re-calling effect: change page state to same value will not refetch automatically,
-        // but state updated earlier will cause effect - so we manually refetch by toggling page (keep simple: re-run fetch by setting page to same value)
-        setPage((p) => p);
+        setPage((p) => p); // trigger effect again (keeps same page)
       }
     } catch (err) {
       console.error("delete err:", err);
