@@ -43,14 +43,6 @@ function firstImageUrl(photo: string | string[] | null | undefined): string {
   if (Array.isArray(photo)) return photo[0] ?? "";
   return photo;
 }
-function slugify(s: string) {
-  const a = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  return a
-    .toLowerCase()
-    .replace(/&/g, "e")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
-}
 
 function generateRandomCode(len = 6) {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -147,6 +139,7 @@ function ProductPickerModal({
                 return (
                   <button key={r.id} onClick={() => toggle(r.id)} className={classNames("group text-left rounded-xl border overflow-hidden", active ? "border-black ring-2 ring-black/20" : "border-neutral-200 hover:border-neutral-300")}>
                     <div className="aspect-[4/5] bg-neutral-100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       {url ? <img src={url} alt={r.name} className="w-full h-full object-cover" /> : null}
                     </div>
                     <div className="p-2">
@@ -182,10 +175,8 @@ export default function CouponsPage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const [store, setStore] = useState<StoreRow | null>(null);
-  const [storeName, setStoreName] = useState<string>("");
 
   // form
-  const [idEditing, setIdEditing] = useState<number | null>(null); // se quiser edição futura
   const [code, setCode] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [discountType, setDiscountType] = useState<DiscountType>("percent");
@@ -223,7 +214,6 @@ export default function CouponsPage() {
         // resolve store
         const { data: pe } = await supabase.from("partner_emails").select("store_name").eq("email", email).eq("active", true).maybeSingle<{ store_name: string }>();
         const sname = pe?.store_name || "";
-        setStoreName(sname);
 
         const { data: srow } = await supabase.from("stores").select("id,store_name,slug").eq("store_name", sname).maybeSingle<StoreRow>();
         if (!srow) throw new Error("Loja não encontrada.");
