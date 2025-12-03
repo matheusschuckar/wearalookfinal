@@ -172,7 +172,8 @@ export default function DeveloperPartnerApplicationsPage() {
   const fetchRows = async () => {
     setRefreshing(true);
     try {
-      let queryBuilder = supabase.from("brand_applications").select("*").order("id", { ascending: false }).limit(1000);
+      // avoid generics to prevent TS mismatch with your supabase client signature
+      let queryBuilder: any = supabase.from("brand_applications").select("*").order("id", { ascending: false }).limit(1000);
       if (startIso) {
         queryBuilder = queryBuilder.gte("created_at", startIso);
       }
@@ -183,10 +184,13 @@ export default function DeveloperPartnerApplicationsPage() {
         return;
       }
       // ensure we treat null review_status as "new" in UI (but do not mutate DB here)
-      const prepared = (data ?? []).map((d: any) => ({
-        ...(d as BrandApplicationRow),
-        review_status: d.review_status ?? null,
-      })) as BrandApplicationRow[];
+      const prepared = (data ?? []).map((d: unknown) => {
+        const row = d as BrandApplicationRow;
+        return {
+          ...row,
+          review_status: row.review_status ?? null,
+        } as BrandApplicationRow;
+      }) as BrandApplicationRow[];
       setRows(prepared);
       setNotice(null);
     } catch (err) {
@@ -247,12 +251,13 @@ export default function DeveloperPartnerApplicationsPage() {
       if (error) {
         console.error("update review_status error", error);
         setNotice("Não foi possível atualizar o status no banco. Verifique se a coluna review_status existe.");
-        // rollback: refetch row
+        // rollback: refetch rows to restore actual state
         await fetchRows();
         return;
       }
-      // success - replace local row with returned data
-      setRows((prev) => prev.map((r) => (r.id === id ? ({ ...(r as any), ...(data as any) } as BrandApplicationRow) : r)));
+      // success - replace local row with returned data (safe cast)
+      const returned = data as BrandApplicationRow;
+      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...returned } : r)));
     } catch (err) {
       console.error(err);
       setNotice("Erro ao atualizar status.");
