@@ -57,13 +57,14 @@ export default function PartnerApplicationDetail() {
     (async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase.from<BrandApplicationRow>("brand_applications").select("*").eq("id", id).single();
+        // removed generic here to avoid TS generic mismatch
+        const { data, error } = await supabase.from("brand_applications").select("*").eq("id", id).single();
         if (error) {
           console.error("fetch single error", error);
           if (mounted) setNotice("Não foi possível carregar a inscrição.");
           return;
         }
-        if (mounted) setRow(data ?? null);
+        if (mounted) setRow((data as BrandApplicationRow) ?? null);
       } catch (err) {
         console.error(err);
         if (mounted) setNotice("Erro ao carregar inscrição.");
@@ -81,8 +82,9 @@ export default function PartnerApplicationDetail() {
     const prev = row.review_status ?? null;
     setRow({ ...row, review_status: newStatus });
     try {
+      // removed generic here as well
       const { data, error } = await supabase
-        .from<BrandApplicationRow>("brand_applications")
+        .from("brand_applications")
         .update({ review_status: newStatus })
         .eq("id", row.id)
         .select()
@@ -93,7 +95,7 @@ export default function PartnerApplicationDetail() {
         setRow({ ...row, review_status: prev });
         return;
       }
-      setRow(data ?? { ...row, review_status: newStatus });
+      setRow((data as BrandApplicationRow) ?? { ...row, review_status: newStatus });
     } catch (err) {
       console.error(err);
       setNotice("Erro ao atualizar status.");
