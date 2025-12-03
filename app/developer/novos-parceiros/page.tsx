@@ -172,8 +172,8 @@ export default function DeveloperPartnerApplicationsPage() {
   const fetchRows = async () => {
     setRefreshing(true);
     try {
-      // avoid generics to prevent TS mismatch with your supabase client signature
-      let queryBuilder: any = supabase.from("brand_applications").select("*").order("id", { ascending: false }).limit(1000);
+      // build query (no explicit 'any' typing)
+      let queryBuilder = supabase.from("brand_applications").select("*").order("id", { ascending: false }).limit(1000);
       if (startIso) {
         queryBuilder = queryBuilder.gte("created_at", startIso);
       }
@@ -183,14 +183,13 @@ export default function DeveloperPartnerApplicationsPage() {
         setNotice("Falha ao carregar inscrições.");
         return;
       }
-      // ensure we treat null review_status as "new" in UI (but do not mutate DB here)
-      const prepared = (data ?? []).map((d: unknown) => {
-        const row = d as BrandApplicationRow;
-        return {
-          ...row,
-          review_status: row.review_status ?? null,
-        } as BrandApplicationRow;
-      }) as BrandApplicationRow[];
+
+      // cast returned data to typed array and prepare rows without using 'any'
+      const dataRows = (data ?? []) as BrandApplicationRow[];
+      const prepared: BrandApplicationRow[] = dataRows.map((row) => ({
+        ...row,
+        review_status: row.review_status ?? null,
+      }));
       setRows(prepared);
       setNotice(null);
     } catch (err) {
