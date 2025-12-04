@@ -17,7 +17,6 @@ export default function PartnerAddProductEntryPage() {
   const [loggedEmail, setLoggedEmail] = useState<string>("");
   const [storeName, setStoreName] = useState<string>("");
 
-  // mesma validação de parceiro que você já usa nas outras páginas
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -135,7 +134,6 @@ export default function PartnerAddProductEntryPage() {
 
   return (
     <main className="min-h-screen" style={{ backgroundColor: SURFACE }}>
-      {/* topbar igual às outras páginas de parceiros/produtos */}
       <header className="w-full border-b border-[#E5E0DA]/80 bg-[#F7F4EF]/80 backdrop-blur-sm">
         <div className="mx-auto max-w-6xl px-8 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -195,7 +193,6 @@ export default function PartnerAddProductEntryPage() {
         </div>
       </header>
 
-      {/* conteúdo */}
       <div className="mx-auto max-w-6xl px-8 pt-10 pb-20 space-y-8">
         <div>
           <h1 className="text-[30px] font-semibold text-black tracking-tight">
@@ -214,27 +211,16 @@ export default function PartnerAddProductEntryPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* 1. Adicionar único produto  */}
           <CardOption
             title="Adicionar um único produto"
             desc="Use este modo para cadastrar manualmente cada item, com fotos, preço, tamanhos e categorias."
             onClick={() => router.push("/parceiros/produtos/adicionar/manual")}
           />
 
-          {/* 2. Importar com CSV */}
           <CardOption
             title="Importar com CSV"
             desc="Suba uma planilha com todos os produtos de uma vez, seguindo o modelo da Look."
             onClick={() => router.push("/parceiros/produtos/adicionar/csv")}
-          />
-
-          {/* 3. Conectar com plataforma */}
-          <CardOption
-            title="Conectar com a sua plataforma"
-            desc="Integre com Shopify, Tiny e outros para sincronizar estoque e preços automaticamente."
-            onClick={() =>
-              router.push("/parceiros/produtos/adicionar/conectar")
-            }
           />
         </div>
       </div>
