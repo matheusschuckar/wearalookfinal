@@ -4,6 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
+function slugify(s: string) {
+  const a = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return a
+    .toLowerCase()
+    .replace(/&/g, "e")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+}
+
 const SURFACE = "#F7F4EF";
 
 type StoreRow = {
