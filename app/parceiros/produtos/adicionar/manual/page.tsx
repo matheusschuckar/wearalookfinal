@@ -129,10 +129,16 @@ if (!allowed) {
             );
           }
         }
-      } catch (err) {
-        console.error(err);
-        setNotice("Não foi possível carregar seus dados.");
-      } finally {
+      } catch (err: any) {
+  console.error("FULL SAVE ERROR:", err);
+
+  const msg =
+    err?.message ||
+    err?.error_description ||
+    JSON.stringify(err);
+
+  setNotice(`Erro ao salvar: ${msg}`);
+} finally {
         setLoading(false);
       }
     })();
