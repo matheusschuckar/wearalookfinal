@@ -312,15 +312,18 @@ useEffect(() => {
         .maybeSingle<{ id?: number }>();
 
       if (error) {
-  console.error("SUPABASE ERROR:", error);
+  console.error("SUPABASE FULL ERROR:", error);
 
-  const message =
-    error.message ||
-    error.details ||
-    error.hint ||
-    JSON.stringify(error);
+  const debug = [
+    `message: ${error.message}`,
+    `details: ${error.details}`,
+    `hint: ${error.hint}`,
+    `code: ${error.code}`,
+  ]
+    .filter(Boolean)
+    .join(" | ");
 
-  setNotice(`Erro ao salvar: ${message}`);
+  setNotice(`Erro ao salvar: ${debug}`);
 } else {
         const newId = data?.id;
         if (newId) {
