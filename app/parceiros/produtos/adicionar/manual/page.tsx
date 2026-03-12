@@ -17,8 +17,8 @@ const SURFACE = "#F7F4EF";
 
 type StoreRow = {
   id: number;
-  name: string;
-  slug?: string | null;
+  store_name: string;
+  cluster?: string | null;
 };
 
 export const dynamic = "force-dynamic";
@@ -108,25 +108,17 @@ if (!allowed) {
           // agora buscamos também slug
           const { data: storeRow } = await supabase
   .from("stores")
-.select("id,store_name,cluster")
-.eq("store_name", sName)
-  .maybeSingle();
+  .select("id,store_name,cluster")
+  .eq("store_name", sName)
+  .maybeSingle<StoreRow>();
           if (storeRow?.id) {
             setStoreId(storeRow.id);
           }
-          if (storeRow?.slug) {
-            setStoreSlug(storeRow.slug);
-          } else if (storeRow?.name) {
+          if (storeRow?.cluster) {
+  setStoreSlug(storeRow.cluster);
+} else if (storeRow?.store_name) {
             // fallback: slugify simples
-            setStoreSlug(
-              storeRow.name
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .toLowerCase()
-                .replace(/&/g, "e")
-                .replace(/[^a-z0-9]+/g, "-")
-                .replace(/(^-|-$)+/g, "")
-            );
+            setStoreSlug(slugify(storeRow.store_name));
           }
         }
       } catch (err: any) {
