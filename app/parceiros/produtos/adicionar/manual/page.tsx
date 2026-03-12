@@ -260,14 +260,18 @@ useEffect(() => {
 let storeIdFinal = storeId;
 
 if (!storeIdFinal) {
-  const { data: storeRow } = await supabase
+  const slug = slugify(storeName);
+
+  const { data: storeRow, error: storeErr } = await supabase
     .from("stores")
     .select("id")
-    .eq("name", storeName)
+    .eq("slug", slug)
     .maybeSingle();
 
+  if (storeErr) throw storeErr;
+
   if (!storeRow?.id) {
-    throw new Error("store_id não encontrado");
+    throw new Error(`store_id não encontrado para slug: ${slug}`);
   }
 
   storeIdFinal = storeRow.id;
