@@ -313,9 +313,16 @@ useEffect(() => {
         .maybeSingle<{ id?: number }>();
 
       if (error) {
-        console.error(error);
-        setNotice("Não foi possível salvar no Supabase.");
-      } else {
+  console.error("SUPABASE ERROR:", error);
+
+  const message =
+    error.message ||
+    error.details ||
+    error.hint ||
+    JSON.stringify(error);
+
+  setNotice(`Erro ao salvar: ${message}`);
+} else {
         const newId = data?.id;
         if (newId) {
           router.replace(`/parceiros/produtos/${newId}`);
