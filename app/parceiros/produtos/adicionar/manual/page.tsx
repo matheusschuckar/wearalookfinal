@@ -276,7 +276,11 @@ useEffect(() => {
       let finalPhotoUrls: string[] = toArray(photoUrl);
       if (photoFiles.length > 0) {
         // usa storeSlug (já definido no carregamento)
-        const slugForUpload = storeSlug || storeName;
+        
+const slugForUpload = storeSlug;
+        if (!storeSlug) {
+  throw new Error("storeSlug não carregado");
+}
         const uploaded = await uploadFilesToStoreImages(photoFiles, slugForUpload, "product");
         if (uploaded.length) {
           finalPhotoUrls = uploaded;
