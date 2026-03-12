@@ -107,10 +107,10 @@ if (!allowed) {
         if (sName) {
           // agora buscamos também slug
           const { data: storeRow } = await supabase
-            .from("stores")
-            .select("id,name,slug")
-            .eq("name", sName)
-            .maybeSingle<StoreRow>();
+  .from("stores")
+  .select("id,name,slug")
+  .eq("id", storeId)
+  .maybeSingle();
           if (storeRow?.id) {
             setStoreId(storeRow.id);
           }
