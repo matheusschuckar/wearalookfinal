@@ -300,9 +300,9 @@ if (!storeIdFinal) {
         // usa storeSlug (já definido no carregamento)
         
 const slugForUpload = storeSlug;
-        if (!storeSlug) {
-  throw new Error("storeSlug não carregado");
-}
+      //  if (!storeSlug) {
+//  throw new Error("storeSlug não carregado");
+//}
         const uploaded = await uploadFilesToStoreImages(photoFiles, slugForUpload, "product");
         if (uploaded.length) {
           finalPhotoUrls = uploaded;
@@ -358,10 +358,17 @@ const slugForUpload = storeSlug;
           router.replace("/parceiros/produtos");
         }
       }
-    } catch (err) {
-      console.error(err);
-      setNotice("Erro ao salvar.");
-    } finally {
+    } catch (err: any) {
+  console.error("FULL SAVE ERROR:", err);
+
+  const msg =
+    err?.message ||
+    err?.error_description ||
+    err?.details ||
+    JSON.stringify(err);
+
+  setNotice(`Erro ao salvar: ${msg}`);
+} finally {
       setSaving(false);
     }
   }
