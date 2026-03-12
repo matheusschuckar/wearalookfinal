@@ -250,6 +250,22 @@ useEffect(() => {
     setSaving(true);
     setNotice(null);
     try {
+      // garantir store_id correto
+let storeIdFinal = storeId;
+
+if (!storeIdFinal) {
+  const { data: storeRow } = await supabase
+    .from("stores")
+    .select("id")
+    .eq("name", storeName)
+    .maybeSingle();
+
+  if (!storeRow?.id) {
+    throw new Error("store_id não encontrado");
+  }
+
+  storeIdFinal = storeRow.id;
+}
       // gênero como array, igual à tela de editar
       let genderArr: string[] = [];
       if (gender === "female") genderArr = ["female"];
@@ -297,7 +313,7 @@ const slugForUpload = storeSlug;
         gender: genderArr,
         categories: allCats,
         store_name: storeName,
-        store_id: storeId,
+        store_id: storeIdFinal,
         eta_text: "30 - 60 min",
         is_active: true,
         view_count: 0,
