@@ -302,7 +302,6 @@ useEffect(() => {
         slug: `${slugify(name)}-${Date.now()}`,
         image_url: finalPhotoUrls[0] || null,
         price_cents: null,
-        store_id: storeId ?? null,
         bio: toStr(bio) || null,
       };
 
