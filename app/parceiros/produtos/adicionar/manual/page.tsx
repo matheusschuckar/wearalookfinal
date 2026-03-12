@@ -299,7 +299,7 @@ useEffect(() => {
         view_count_today: 0,
         featured: false,
         code: null,
-        slug: slugify(name),
+        slug: `${slugify(name)}-${Date.now()}`,
         image_url: finalPhotoUrls[0] || null,
         price_cents: null,
         store_id: storeId ?? null,
