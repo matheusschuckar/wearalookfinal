@@ -87,8 +87,7 @@ export default function PartnerProductCreateManualPage() {
 //   { p_email: email }
 // );
 const allowed = true;
-        if (allowErr) throw allowErr;
-        if (!allowed) {
+if (!allowed) {
           await supabase.auth.signOut({ scope: "local" });
           router.replace("/parceiros/login");
           return;
