@@ -109,7 +109,7 @@ if (!allowed) {
           const { data: storeRow } = await supabase
   .from("stores")
   .select("id,name,slug")
-  .eq("id", storeId)
+  .eq("name", sName)
   .maybeSingle();
           if (storeRow?.id) {
             setStoreId(storeRow.id);
