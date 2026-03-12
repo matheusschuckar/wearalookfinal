@@ -108,8 +108,8 @@ if (!allowed) {
           // agora buscamos também slug
           const { data: storeRow } = await supabase
   .from("stores")
-  .select("id,name,slug")
-  .eq("name", sName)
+.select("id,store_name,cluster")
+.eq("store_name", sName)
   .maybeSingle();
           if (storeRow?.id) {
             setStoreId(storeRow.id);
@@ -264,8 +264,8 @@ if (!storeIdFinal) {
 
   const { data: storeRow, error: storeErr } = await supabase
     .from("stores")
-    .select("id")
-    .eq("slug", slug)
+.select("id")
+.eq("store_name", storeName)
     .maybeSingle();
 
   if (storeErr) throw storeErr;
