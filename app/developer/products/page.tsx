@@ -18,19 +18,18 @@ export default function DeveloperProductsPage() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [email, setEmail] = useState<string>("");
-  const [allowed, setAllowed] = useState(false);
+  const [allowed, setAllowed] = useState<boolean | null>(null);
 
-  // ================= AUTH =================
+  // ================= AUTH (ALINHADO COM HOME) =================
   useEffect(() => {
     let mounted = true;
 
     (async () => {
       try {
-        const { data } = await supabase.auth.getSession();
-        const user = data?.session?.user;
+        const { data: { user } } = await supabase.auth.getUser();
 
         if (!user?.email) {
-          router.replace("/developer/login");
+          setAllowed(false);
           return;
         }
 
@@ -44,8 +43,6 @@ export default function DeveloperProductsPage() {
           { p_email: email }
         );
 
-        let isAllowed = false;
-
         if (error) {
           const { data: rows } = await supabase
             .from("developer_emails")
@@ -54,46 +51,38 @@ export default function DeveloperProductsPage() {
             .eq("active", true)
             .limit(1);
 
-          isAllowed = (rows?.length ?? 0) > 0;
+          setAllowed((rows?.length ?? 0) > 0);
         } else {
-          isAllowed = !!ok;
-        }
-
-        if (!isAllowed) {
-          router.replace("/");
-          return;
-        }
-
-        if (mounted) {
-          setAllowed(true);
+          setAllowed(!!ok);
         }
       } catch (err) {
-        console.error("Auth error:", err);
-        router.replace("/");
+        console.error(err);
+        setAllowed(false);
+      } finally {
+        if (mounted) setLoading(false);
       }
     })();
 
     return () => {
       mounted = false;
     };
-  }, [router]);
+  }, []);
 
   // ================= FETCH =================
   useEffect(() => {
-    if (!allowed) return;
+    if (allowed !== true) return;
 
     let cancelled = false;
 
-    const fetchProducts = async () => {
-      setLoading(true);
-
+    const load = async () => {
       try {
+        console.log("BUSCANDO PRODUTOS...");
+
         const { data, error } = await supabase
           .from("products")
-          .select(
-            "id, name, price_tag, store_name, created_at"
-          )
-          .order("created_at", { ascending: false });
+          .select("*");
+
+        console.log("RESULTADO:", data, error);
 
         if (error) throw error;
 
@@ -102,17 +91,12 @@ export default function DeveloperProductsPage() {
         }
       } catch (err) {
         console.error("Erro ao buscar produtos:", err);
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
       }
     };
 
-    fetchProducts();
+    load();
 
-    // auto refresh (igual parceiros)
-    const t = setInterval(fetchProducts, 60000);
+    const t = setInterval(load, 60000);
 
     return () => {
       cancelled = true;
@@ -122,8 +106,8 @@ export default function DeveloperProductsPage() {
 
   // ================= DELETE =================
   async function handleDelete(id: string | number) {
-    const confirmDelete = confirm("Tem certeza que quer deletar?");
-    if (!confirmDelete) return;
+    const ok = confirm("Tem certeza que quer deletar?");
+    if (!ok) return;
 
     try {
       const { error } = await supabase
@@ -135,47 +119,54 @@ export default function DeveloperProductsPage() {
 
       setProducts((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
-      console.error("Erro ao deletar:", err);
-      alert("Erro ao deletar produto");
+      console.error(err);
+      alert("Erro ao deletar");
     }
   }
 
-  // ================= UI =================
+  // ================= GUARD =================
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-[#F7F4EF]">
-        <span className="text-neutral-500">Carregando produtos...</span>
+        <span className="text-neutral-500">Carregando...</span>
       </main>
     );
   }
 
+  if (!allowed) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-[#F7F4EF]">
+        <span className="text-neutral-500">
+          Acesso restrito ao developer
+        </span>
+      </main>
+    );
+  }
+
+  // ================= UI =================
   return (
     <main className="min-h-screen bg-[#F7F4EF] px-8 py-10">
-      {/* HEADER */}
       <div className="max-w-6xl mx-auto flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-semibold">Produtos</h1>
           <p className="text-sm text-neutral-600 mt-1">
-            Visão completa do catálogo da Look
+            Catálogo completo da Look
           </p>
         </div>
 
         <div className="text-xs text-neutral-500">{email}</div>
       </div>
 
-      {/* STATS */}
       <div className="max-w-6xl mx-auto mt-6">
         <div className="bg-white border rounded-2xl p-4 text-sm">
-          Total de produtos:{" "}
-          <span className="font-semibold">{products.length}</span>
+          Total: <span className="font-semibold">{products.length}</span>
         </div>
       </div>
 
-      {/* LISTA */}
       <div className="max-w-6xl mx-auto mt-6 space-y-3">
         {products.length === 0 ? (
-          <div className="rounded-2xl bg-white border p-10 text-center text-neutral-500">
-            Nenhum produto encontrado.
+          <div className="bg-white border rounded-2xl p-10 text-center text-neutral-500">
+            Nenhum produto encontrado
           </div>
         ) : (
           products.map((p) => (
@@ -184,11 +175,11 @@ export default function DeveloperProductsPage() {
               className="bg-white border rounded-2xl p-4 flex justify-between items-center"
             >
               <div>
-                <div className="font-medium text-black">
-                  {p.name || "Produto sem nome"}
+                <div className="font-medium">
+                  {p.name || "Sem nome"}
                 </div>
-                <div className="text-xs text-neutral-500 mt-1">
-                  {p.store_name || "—"}
+                <div className="text-xs text-neutral-500">
+                  {p.store_name}
                 </div>
               </div>
 
@@ -201,14 +192,14 @@ export default function DeveloperProductsPage() {
                   onClick={() =>
                     router.push(`/developer/products/${p.id}`)
                   }
-                  className="text-xs px-3 py-1 rounded-full border"
+                  className="text-xs px-3 py-1 border rounded-full"
                 >
                   Editar
                 </button>
 
                 <button
                   onClick={() => handleDelete(p.id)}
-                  className="text-xs px-3 py-1 rounded-full bg-red-500 text-white"
+                  className="text-xs px-3 py-1 bg-red-500 text-white rounded-full"
                 >
                   Deletar
                 </button>
