@@ -40,7 +40,10 @@ export default function PartnerProductCreateManualPage() {
   const [bio, setBio] = useState<string>("");
   const [category, setCategory] = useState<string>("");
   const [gender, setGender] = useState<string>("");
-  const [categories, setCategories] = useState<string>("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+const [categoryInput, setCategoryInput] = useState("");
+const [categoriesOpen, setCategoriesOpen] = useState(false);
+const categoriesBoxRef = useRef<HTMLDivElement | null>(null);
 
   // NOVO: arquivos de imagem uploadados
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
@@ -173,6 +176,17 @@ useEffect(() => {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
+  useEffect(() => {
+  function onClickOutside(e: MouseEvent) {
+    if (!categoriesBoxRef.current) return;
+    if (!categoriesBoxRef.current.contains(e.target as Node)) {
+      setCategoriesOpen(false);
+    }
+  }
+  document.addEventListener("mousedown", onClickOutside);
+  return () => document.removeEventListener("mousedown", onClickOutside);
+}, []);
+
   // adicionar tamanho
   function handleAddSize() {
     const v = newSize.trim().toUpperCase();
@@ -185,6 +199,25 @@ useEffect(() => {
     setSizeEntries((old) => [...old, { size: v, stock: "0" }]);
     setNewSize("");
   }
+
+  function toggleCategory(cat: string) {
+  setSelectedCategories((prev) =>
+    prev.includes(cat)
+      ? prev.filter((c) => c !== cat)
+      : [...prev, cat]
+  );
+}
+
+function addCustomCategory() {
+  const v = categoryInput.trim();
+  if (!v) return;
+
+  if (!selectedCategories.includes(v)) {
+    setSelectedCategories((prev) => [...prev, v]);
+  }
+
+  setCategoryInput("");
+}
 
   // ============ Upload helpers (inspirado em PersonalizarLojaPage) ============
   // upload single file to bucket store_images, path users/<uid>/<storeSlug>/<prefix>-<timestamp>.<ext>
@@ -290,7 +323,7 @@ if (!storeIdFinal) {
       else if (gender === "both") genderArr = ["male", "female"];
 
       const primaryCategory = toStr(category);
-      const extraCats = toArray(categories);
+      const extraCats = selectedCategories;
       const allCats = Array.from(
         new Set(
           [primaryCategory, ...extraCats].filter((x) => x && x.length > 0)
@@ -799,18 +832,76 @@ const parsedPriceInt = parsePriceToInteger(priceTag);
                 </div>
 
                 {/* categorias extras */}
-                <div className={fieldRoot}>
-                  <label className={fieldLabel}>Categorias extras</label>
-                  <input
-                    value={categories}
-                    onChange={(e) => setCategories(e.target.value)}
-                    className={fieldInput}
-                    placeholder="sapato, sapatilha..."
-                  />
-                  <p className="text-[10px] text-neutral-400 mt-[2px]">
-                    Vamos juntar esta lista com a categoria principal.
-                  </p>
-                </div>
+<div className={fieldRoot} ref={categoriesBoxRef}>
+  <label className={fieldLabel}>Categorias extras</label>
+
+  <div
+    className="min-h-[40px] rounded-2xl bg-white px-3 py-2 flex flex-wrap gap-2 items-center border border-transparent focus-within:border-black/30"
+    onClick={() => setCategoriesOpen(true)}
+  >
+    {selectedCategories.map((cat) => (
+      <span
+        key={cat}
+        className="px-2 py-[3px] rounded-full bg-black text-white text-[10px] flex items-center gap-1"
+      >
+        {cat}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleCategory(cat);
+          }}
+          className="text-white/70 hover:text-white"
+        >
+          ×
+        </button>
+      </span>
+    ))}
+
+    <input
+      value={categoryInput}
+      onChange={(e) => setCategoryInput(e.target.value)}
+      className="flex-1 outline-none text-sm min-w-[80px]"
+      placeholder="Adicionar..."
+      onFocus={() => setCategoriesOpen(true)}
+    />
+  </div>
+
+  {categoriesOpen && (
+    <div className="mt-2 max-h-48 overflow-auto rounded-2xl bg-white shadow border text-sm">
+      {allCategories.map((cat) => (
+        <button
+          key={cat}
+          type="button"
+          onClick={() => toggleCategory(cat)}
+          className={`w-full text-left px-4 py-2 ${
+            selectedCategories.includes(cat)
+              ? "bg-black text-white"
+              : "hover:bg-[#F7F4EF]"
+          }`}
+        >
+          {cat}
+        </button>
+      ))}
+
+      {categoryInput.trim() && (
+        <>
+          <div className="border-t my-1" />
+          <button
+            type="button"
+            onClick={addCustomCategory}
+            className="w-full text-left px-4 py-2 text-xs text-neutral-500 hover:bg-[#F7F4EF]"
+          >
+            + Criar "{categoryInput}"
+          </button>
+        </>
+      )}
+    </div>
+  )}
+
+  <p className="text-[10px] text-neutral-400 mt-[2px]">
+    Você pode selecionar várias ou criar novas.
+  </p>
+</div>
 
                 {/* urls + upload */}
                 <div className={fieldRoot}>
