@@ -143,15 +143,23 @@ if (!allowed) {
 useEffect(() => {
   (async () => {
     try {
-      const { data, error } = await supabase.from("products").select("category");
+      const { data, error } = await supabase.from("products").select("category, categories");
       if (error) throw error;
 
       // tipagem explícita sem usar `any`
-      const rows = (data ?? []) as Array<{ category?: string | null }>;
+      const rows = (data ?? []) as Array<{
+  category?: string | null;
+  categories?: string[] | null;
+}>;
 
-      const all = rows
-        .map((r) => (r.category ? r.category.trim() : ""))
-        .filter(Boolean);
+const all = rows.flatMap((r) => {
+  const main = r.category ? [r.category.trim()] : [];
+  const extras = Array.isArray(r.categories)
+    ? r.categories.map((c) => c.trim())
+    : [];
+
+  return [...main, ...extras];
+}).filter(Boolean);
 
       const uniq = Array.from(new Set(all)).sort((a, b) =>
         a.localeCompare(b, "pt-BR")
