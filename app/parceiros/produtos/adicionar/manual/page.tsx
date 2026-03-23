@@ -238,6 +238,21 @@ useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [photoFiles]);
 
+  function parsePriceToInteger(value: string): number | null {
+  if (!value) return null;
+
+  // remove R$, espaços etc
+  let cleaned = value
+    .replace(/[^\d,.-]/g, "") // mantém números, vírgula e ponto
+    .replace(",", "."); // converte vírgula pra ponto
+
+  const num = Number(cleaned);
+
+  if (!Number.isFinite(num)) return null;
+
+  // arredonda sempre pra cima
+  return Math.ceil(num);
+}
   // salvar
   async function handleSave() {
     if (!storeName) {
@@ -304,10 +319,12 @@ const slugForUpload = storeSlug;
           finalPhotoUrls = uploaded;
         }
       }
-
+const parsedPriceInt = parsePriceToInteger(priceTag);
+      
       const insertPayload: Record<string, unknown> = {
         name: toStr(name) || null,
         price_tag: toStr(priceTag) || null,
+        price_cents: parsedPriceInt ?? 0,
         photo_url: finalPhotoUrls,
         sizes: sizesArray.length ? sizesArray : [],
         size_stocks: sizeStocksArray.length ? sizeStocksArray : [],
@@ -323,7 +340,6 @@ const slugForUpload = storeSlug;
         featured: false,
         code: null,
         image_url: finalPhotoUrls[0] || null,
-        price_cents: null,
         bio: toStr(bio) || null,
       };
 
