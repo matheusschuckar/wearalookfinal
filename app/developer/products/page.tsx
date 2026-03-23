@@ -35,14 +35,32 @@ export default function DeveloperProductsPage() {
 
       // 🔒 (opcional mas recomendado)
       // validar se é developer
-      const { data: isDev } = await supabase.rpc("is_developer", {
-        p_email: user.email,
-      });
+      const email = user.email.toLowerCase();
 
-      if (!isDev) {
-        router.replace("/");
-        return;
-      }
+const { data: ok, error } = await supabase.rpc(
+  "developer_email_allowed",
+  { p_email: email }
+);
+
+let isAllowed = false;
+
+if (error) {
+  const { data: rows } = await supabase
+    .from("developer_emails")
+    .select("email")
+    .eq("email", email)
+    .eq("active", true)
+    .limit(1);
+
+  isAllowed = (rows?.length ?? 0) > 0;
+} else {
+  isAllowed = !!ok;
+}
+
+if (!isAllowed) {
+  router.replace("/");
+  return;
+}
 
       fetchProducts();
     })();
