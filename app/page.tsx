@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, CSSProperties } from "react";
 import Head from "next/head";
 
 export default function OpenAppPage() {
@@ -108,7 +108,7 @@ export default function OpenAppPage() {
               </p>
             </div>
 
-            <VStack spacing={16} align="leading" style={styles.fallbackArea}>
+            <VStack spacing={16} align="flex-start" style={styles.fallbackArea}>
               <TextBrutal size={13} weight={600} color="#666">
                 Se o redirecionamento automático falhar, utilize o terminal abaixo:
               </TextBrutal>
@@ -128,6 +128,7 @@ export default function OpenAppPage() {
 
           <div style={styles.imageColumn}>
             <div style={styles.imageConstraint}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img 
                 src={iPhoneMockupUrl} 
                 alt="Look App" 
@@ -149,8 +150,21 @@ export default function OpenAppPage() {
   );
 }
 
-// MARK: - COMPONENTS
-const TextBrutal = ({ size, weight, tracking, color, uppercased, children, style }) => (
+// ======================================================
+// MARK: - COMPONENTS TIPADOS PARA TYPESCRIPT
+// ======================================================
+
+interface TextBrutalProps {
+  size: number;
+  weight?: number;
+  tracking?: number;
+  color?: string;
+  uppercased?: boolean;
+  children: React.ReactNode;
+  style?: CSSProperties;
+}
+
+const TextBrutal: React.FC<TextBrutalProps> = ({ size, weight, tracking, color, uppercased, children, style }) => (
   <span style={{
     fontSize: `${size}px`,
     fontWeight: weight || 400,
@@ -164,15 +178,26 @@ const TextBrutal = ({ size, weight, tracking, color, uppercased, children, style
   </span>
 );
 
-const HStack = ({ spacing, children, style }) => (
+interface StackProps {
+  spacing: number;
+  children: React.ReactNode;
+  style?: CSSProperties;
+  align?: CSSProperties['alignItems'];
+}
+
+const HStack: React.FC<StackProps> = ({ spacing, children, style }) => (
   <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: `${spacing}px`, ...style }}>{children}</div>
 );
-const VStack = ({ spacing, align, children, style }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', alignItems: align === 'leading' ? 'flex-start' : 'center', gap: `${spacing}px`, ...style }}>{children}</div>
+
+const VStack: React.FC<StackProps> = ({ spacing, align, children, style }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: align || 'center', gap: `${spacing}px`, ...style }}>{children}</div>
 );
 
-// MARK: - STYLES
-const styles = {
+// ======================================================
+// MARK: - STYLES TIPADOS PARA TYPESCRIPT
+// ======================================================
+
+const styles: Record<string, CSSProperties> = {
   main: {
     backgroundColor: "#F6F3ED", 
     color: "#000",
