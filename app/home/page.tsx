@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import ProductCard from "@/components/ProductCard";
 import FiltersModal from "@/components/FiltersModal";
 import ChipsRow from "@/components/ChipsRow";
-import { BannersCarousel } from "@/components/BannersCarousel";
+import { BannersCarousel, type Banner } from "@/components/BannersCarousel";
 import { EditorialTallBanner, SelectionHeroBanner } from "@/components/HomeBanners";
 import HeaderBar from "@/components/HeaderBar";
 import AppDrawer from "@/components/AppDrawer";
