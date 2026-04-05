@@ -3,10 +3,6 @@
 import { usePathname } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 
-/**
- * Esconda a BottomNav só onde NÃO deve aparecer.
- * Use prefixos: qualquer rota que comece com esses caminhos será ocultada.
- */
 const HIDE_ROUTES = [
   "/auth",
   "/profile",
@@ -23,17 +19,14 @@ const HIDE_ROUTES = [
 
 const HIDE_EXACT = ["/"];
 
-const shouldHide =
-  HIDE_EXACT.includes(pathname) ||
-  HIDE_ROUTES.some(route => pathname.startsWith(route));
-
 export default function BottomNavGate() {
   const pathname = usePathname() ?? "/";
 
-  const hide = HIDE_ROUTES.some(
-    (base) => pathname === base || pathname.startsWith(base)
-  );
+  const shouldHide =
+    HIDE_EXACT.includes(pathname) ||
+    HIDE_ROUTES.some(route => pathname.startsWith(route));
 
-  if (hide) return null;
+  if (shouldHide) return null;
+
   return <BottomNav />;
 }
