@@ -5,17 +5,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
-import ProductCard from "../components/ProductCard";
-import FiltersModal from "../components/FiltersModal";
-import ChipsRow from "../components/ChipsRow";
-import { BannersCarousel, type Banner } from "../components/BannersCarousel";
-import {
-  EditorialTallBanner,
-  SelectionHeroBanner,
-} from "../components/HomeBanners";
-
-import HeaderBar from "../components/HeaderBar";
-import AppDrawer from "../components/AppDrawer";
+import ProductCard from "@/components/ProductCard";
+import FiltersModal from "@/components/FiltersModal";
+import ChipsRow from "@/components/ChipsRow";
+import { BannersCarousel } from "@/components/BannersCarousel";
+import { EditorialTallBanner, SelectionHeroBanner } from "@/components/HomeBanners";
+import HeaderBar from "@/components/HeaderBar";
+import AppDrawer from "@/components/AppDrawer";
 import type { Product, Profile } from "@/lib/data/types";
 
 import {
