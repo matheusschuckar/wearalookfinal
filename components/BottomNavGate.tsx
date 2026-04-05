@@ -21,6 +21,12 @@ const HIDE_ROUTES = [
   "/privacy",
 ];
 
+const HIDE_EXACT = ["/"];
+
+const shouldHide =
+  HIDE_EXACT.includes(pathname) ||
+  HIDE_ROUTES.some(route => pathname.startsWith(route));
+
 export default function BottomNavGate() {
   const pathname = usePathname() ?? "/";
 
