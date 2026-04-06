@@ -56,7 +56,7 @@ export default function IGArtGeneratorPage() {
                 </p>
 
                 <p style={artStyles.support}>
-                  ENCONTRE, ESCOLHA E<br/> RECEBA EM MINUTOS.
+                  ENCONTRE, ESCOLHA<br/>  E RECEBA EM MINUTOS.
                 </p>
               </div>
 
@@ -79,7 +79,7 @@ export default function IGArtGeneratorPage() {
 
           <footer style={artStyles.artFooter}>
             <span>WEARALOOK.COM</span>
-            <span>© 2026 // SÃO PAULO, BR</span>
+           
           </footer>
 
         </div>
