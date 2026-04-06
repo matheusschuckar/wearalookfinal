@@ -24,7 +24,7 @@ export default function IGArtGeneratorPage() {
       <main style={pageStyles.wrapper}>
         <div style={pageStyles.controls}>
           <h2 style={{ fontSize: "12px", fontVariantCaps: "all-small-caps", fontWeight: "bold", letterSpacing: "1px" }}>
-            Look Editorial Art Generator // Mobile Optimized
+            Look Editorial Art Generator
           </h2>
         </div>
 
@@ -46,27 +46,22 @@ export default function IGArtGeneratorPage() {
               
               <header style={artStyles.dossierHeader}>
                 <span style={artStyles.logo}>LOOK</span>
-                <span style={artStyles.versionLabel}>NOVO DESIGN</span>
               </header>
 
               <div style={artStyles.block}>
-                <span style={artStyles.kicker}>
-                  REDESENHAMOS A EXPERIÊNCIA
-                </span>
-
                 <p style={artStyles.subtitle}>
+                  UM NOVO DESIGN.<br />
                   MAIS RÁPIDO.<br />
-                  MAIS INTUITIVO.<br />
-                  FEITO PARA O LUXO.
+                  MAIS INTUITIVO.
                 </p>
 
                 <p style={artStyles.support}>
-                  ENCONTRE, ESCOLHA E<br/> RECEBA IMEDIATAMENTE.
+                  ENCONTRE, ESCOLHA E RECEBA EM MINUTOS.
                 </p>
               </div>
 
               <div style={artStyles.button}>
-                ATUALIZE O APP
+                BAIXAR O APP
               </div>
 
             </div>
@@ -85,7 +80,7 @@ export default function IGArtGeneratorPage() {
 
           <footer style={artStyles.artFooter}>
             <span>WEARALOOK.COM</span>
-            <span>NOVO DESIGN // 2026</span>
+            <span>© 2026 // SÃO PAULO, BR</span>
           </footer>
 
         </div>
@@ -126,121 +121,112 @@ const artStyles: Record<string, CSSProperties> = {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   },
   heroTextSection: {
-    padding: "90px 80px 40px 80px",
+    padding: "100px 90px 40px 90px",
+    position: "relative",
+    zIndex: 20, // 🔥 Garante que o Título fique por cima de TUDO
   },
   heroTitle: {
-    fontSize: "145px", // 🔥 Massivo
+    fontSize: "120px",
     fontWeight: 900,
-    letterSpacing: "-8px", // Muito grudado
-    lineHeight: "0.85", // Esmagado
+    letterSpacing: "-7px",
+    lineHeight: "0.88",
     color: "#000",
     textTransform: "uppercase",
     margin: 0,
   },
   divider: {
-    height: "2px", // Linha mais grossa para destacar no celular
+    height: "2px",
     backgroundColor: "#000",
-    margin: "0 80px",
-    zIndex: 10,
+    margin: "0 90px",
+    position: "relative",
+    zIndex: 10, // 🔥 A linha fica por baixo do celular (que tem zIndex 15)
   },
   dossierSection: {
     flex: 1,
     position: "relative",
-    padding: "60px 80px",
+    padding: "60px 90px",
     display: "flex",
   },
   textDossier: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    maxWidth: "580px", // Expandido para o texto maior caber
-    gap: "50px",
-    zIndex: 10, // Por cima de tudo
+    maxWidth: "520px",
+    gap: "40px",
+    position: "relative",
+    zIndex: 20, // 🔥 Os textos também ficam por cima do celular
   },
   dossierHeader: {
     display: "flex",
     alignItems: "center",
-    gap: "24px",
+    gap: "16px",
   },
   logo: {
-    fontSize: "48px", // Aumentado
+    fontSize: "40px",
     fontWeight: 900,
     letterSpacing: "-2px",
-  },
-  versionLabel: {
-    fontSize: "24px", // Aumentado (antes era 14px)
-    fontWeight: 800,
-    letterSpacing: "4px",
-    color: "rgba(0,0,0,0.5)",
   },
   block: {
     display: "flex",
     flexDirection: "column",
-    gap: "24px",
-  },
-  kicker: {
-    fontSize: "24px", // Aumentado (antes era 14px)
-    fontWeight: 800,
-    letterSpacing: "4px",
-    color: "#777",
+    gap: "20px",
   },
   subtitle: {
-    fontSize: "48px", // Aumentado (antes era 40px)
-    fontWeight: 800,
+    fontSize: "40px",
+    fontWeight: 700,
     color: "#000",
-    lineHeight: "1.1",
-    letterSpacing: "-1px",
+    lineHeight: "1.15",
     margin: 0,
   },
   support: {
-    fontSize: "30px", // Aumentado
-    fontWeight: 600,
-    color: "rgba(0,0,0,0.6)",
-    lineHeight: "1.3",
+    fontSize: "22px",
+    fontWeight: 500,
+    color: "rgba(0,0,0,0.7)",
+    lineHeight: "1.4",
     margin: 0,
   },
   button: {
     backgroundColor: "#000",
     color: "#fff",
-    padding: "24px 40px", // Muito mais gordo
-    fontSize: "24px", // Fonte legível no mobile
-    fontWeight: 900,
-    letterSpacing: "3px",
+    padding: "20px 32px",
+    fontSize: "14px",
+    fontWeight: 800,
+    letterSpacing: "2px",
     textTransform: "uppercase",
     width: "fit-content",
-    marginTop: "20px",
   },
   mockupWrapper: {
     position: "absolute",
-    right: "-120px", // Empurrado mais pra direita
-    bottom: "-220px", // Empurrado mais pra baixo
+    right: "-100px",
+    bottom: "-180px",
     animation: "floatArtAnimation 6s ease-in-out infinite",
-    zIndex: 5,
+    zIndex: 15, // 🔥 O Sanduíche: Celular (15) esmaga a Linha (10) mas é esmagado pelo Texto (20)
   },
   mockup: {
-    height: "1150px", // Continua gigante
+    height: "1100px",
     transform: "rotate(-4deg)",
   },
   mockupShadow: {
     position: "absolute",
-    bottom: "220px",
+    bottom: "200px",
     left: "150px",
     width: "350px",
-    height: "50px",
-    backgroundColor: "rgba(0,0,0,0.3)",
-    filter: "blur(40px)",
+    height: "40px",
+    backgroundColor: "rgba(0,0,0,0.25)",
+    filter: "blur(30px)",
     transform: "rotate(-4deg)",
     zIndex: -1,
   },
   artFooter: {
     display: "flex",
     justifyContent: "space-between",
-    padding: "40px 80px",
-    fontSize: "22px", // Aumentado (antes era 16px)
-    fontWeight: 800,
-    letterSpacing: "4px",
+    padding: "40px 90px",
+    fontSize: "16px",
+    fontWeight: 700,
+    letterSpacing: "3px",
     color: "rgba(0,0,0,0.35)",
-    borderTop: "2px solid rgba(0,0,0,0.05)",
-    zIndex: 10,
+    borderTop: "1px solid rgba(0,0,0,0.05)",
+    position: "relative",
+    zIndex: 20, // 🔥 Garante que o Footer não seja coberto pela sombra do celular
   }
 };
