@@ -10,7 +10,7 @@ export default function IGArtGeneratorPage() {
   return (
     <>
       <Head>
-        <title>Look Art Studio // NEW DESIGN DROP</title>
+        <title>Look Art Studio // NEW DESIGN</title>
       </Head>
       
       <style dangerouslySetInnerHTML={{__html: `
@@ -45,28 +45,28 @@ export default function IGArtGeneratorPage() {
             <div style={artStyles.textDossier}>
               <header style={artStyles.dossierHeader}>
                 <span style={artStyles.logo}>LOOK</span>
-                <span style={artStyles.versionLabel}>NEW DESIGN</span>
+                <span style={artStyles.versionLabel}>NOVO DESIGN</span>
               </header>
 
               <div style={artStyles.block}>
-                <span style={artStyles.kicker}>NEW ERA OF FASHION DELIVERY</span>
+                <span style={artStyles.kicker}>REDESENHAMOS A EXPERIÊNCIA</span>
                 <p style={artStyles.subtitle}>
-                  A NEW INTERFACE FOR<br />
-                  INSTANT STYLE.<br />
-                  CURATED PIECES,<br />
-                  DELIVERED IN MINUTES.
+                  UM NOVO DESIGN,<br />
+                  MAIS RÁPIDO, MAIS INTUITIVO.<br />
+                  ENCONTRE, ESCOLHA E RECEBA<br />
+                  EM MINUTOS.
                 </p>
               </div>
 
               <div style={artStyles.button}>
-                DOWNLOAD THE APP
+                BAIXAR O APP
               </div>
             </div>
 
             <div style={artStyles.mockupWrapper}>
               <img 
                 src={iPhoneMockupUrl} 
-                alt="Look App New Design" 
+                alt="Look App Novo Design" 
                 style={artStyles.mockup}
               />
               <div style={artStyles.mockupShadow} />
@@ -75,7 +75,7 @@ export default function IGArtGeneratorPage() {
 
           <footer style={artStyles.artFooter}>
             <span>WEARALOOK.COM</span>
-            <span>DESIGN DROP // 2026</span>
+            <span>NOVO DESIGN // 2026</span>
           </footer>
 
         </div>
