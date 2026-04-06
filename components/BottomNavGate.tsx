@@ -11,6 +11,7 @@ const HIDE_ROUTES = [
   "/parceiros",
   "/onboarding",
   "/parceiros/login",
+  "/arteig",
   "/developer",
   "/terms",
   "/novos-parceiros",
