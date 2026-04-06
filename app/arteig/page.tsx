@@ -56,7 +56,7 @@ export default function IGArtGeneratorPage() {
                 </p>
 
                 <p style={artStyles.support}>
-                  ENCONTRE, ESCOLHA E<br/> RECEBA EM MINUTOS.
+                  ENCONTRE, ESCOLHA E RECEBA EM MINUTOS.
                 </p>
               </div>
 
@@ -81,6 +81,201 @@ export default function IGArtGeneratorPage() {
           <footer style={artStyles.artFooter}>
             <span>WEARALOOK.COM</span>
             <span>© 2026 // SÃO PAULO, BR</span>
+          </footer>
+
+        </div>
+      </main>
+    </>
+  );
+}
+
+const pageStyles: Record<string, CSSProperties> = {
+  wrapper: {
+    backgroundColor: "#111",
+    minHeight: "100vh",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    padding: "40px",
+    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+  },
+  controls: {
+    backgroundColor: "#FFF",
+    padding: "12px 20px",
+    marginBottom: "40px",
+    textAlign: "center",
+    border: "2px solid #000",
+  }
+};
+
+const artStyles: Record<string, CSSProperties> = {
+  canvas: {
+    width: "1080px",
+    height: "1350px",
+    backgroundColor: "#F6F3ED",
+    position: "relative",
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
+    boxSizing: "border-box",
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  },
+  heroTextSection: {
+    padding: "100px 90px 40px 90px",
+    position: "relative",
+    zIndex: 20, // Título fica em cima de tudo
+  },
+  heroTitle: {
+    fontSize: "145px", 
+    fontWeight: 900,
+    letterSpacing: "-8px", 
+    lineHeight: "0.85", 
+    color: "#000",
+    textTransform: "uppercase",
+    margin: 0,
+  },
+  divider: {
+    height: "2px", 
+    backgroundColor: "#000",
+    margin: "0 80px",
+    position: "relative",
+    zIndex: 10, // A linha fica por baixo do celular (que tem zIndex 15)
+  },
+  dossierSection: {
+    flex: 1,
+    position: "relative",
+    padding: "60px 80px",
+    display: "flex",
+  },
+  textDossier: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    maxWidth: "520px", 
+    gap: "40px",
+    position: "relative",
+    zIndex: 20, // O texto de apoio e o botão ficam por cima do celular
+  },
+  dossierHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+  },
+  logo: {
+    fontSize: "40px", 
+    fontWeight: 900,
+    letterSpacing: "-2px",
+  },
+  block: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "20px",
+  },
+  subtitle: {
+    fontSize: "40px", 
+    fontWeight: 700,
+    color: "#000",
+    lineHeight: "1.15",
+    margin: 0,
+  },
+  support: {
+    fontSize: "22px", 
+    fontWeight: 500,
+    color: "rgba(0,0,0,0.7)",
+    lineHeight: "1.4",
+    margin: 0,
+  },
+  button: {
+    backgroundColor: "#000",
+    color: "#fff",
+    padding: "20px 32px",
+    fontSize: "14px",
+    fontWeight: 800,
+    letterSpacing: "2px",
+    textTransform: "uppercase",
+    width: "fit-content",
+  },
+  mockupWrapper: {
+    position: "absolute",
+    right: "-100px", 
+    bottom: "-180px", 
+    animation: "floatArtAnimation 6s ease-in-out infinite",
+    zIndex: 15, // Celular por cima da linha (10), mas embaixo do texto (20)
+  },
+  mockup: {
+    height: "980px", // 🔥 Ajuste cirúrgico: Diminuído para criar o respiro perfeito abaixo de 'MINUTES.'
+    transform: "rotate(-4deg)",
+  },
+  mockupShadow: {
+    position: "absolute",
+    bottom: "200px",
+    left: "150px",
+    width: "350px",
+    height: "40px",
+    backgroundColor: "rgba(0,0,0,0.25)",
+    filter: "blur(30px)",
+    transform: "rotate(-4deg)",
+    zIndex: -1,
+  },
+  artFooter: {
+    display: "flex",
+    justifyContent: "space-between",
+    padding: "40px 80px",
+    fontSize: "16px",
+    fontWeight: 700,
+    letterSpacing: "3px",
+    color: "rgba(0,0,0,0.35)",
+    borderTop: "1px solid rgba(0,0,0,0.05)",
+    position: "relative",
+    zIndex: 20, // Garante que o footer não seja engolido pela sombra
+  }
+};              IN MINUTES.
+            </h1>
+          </section>
+
+          <div style={artStyles.divider} />
+
+          <section style={artStyles.dossierSection}>
+            
+            <div style={artStyles.textDossier}>
+              
+              <header style={artStyles.dossierHeader}>
+                <span style={artStyles.logo}>LOOK</span>
+              </header>
+
+              <div style={artStyles.block}>
+                <p style={artStyles.subtitle}>
+                  UM NOVO DESIGN.<br />
+                  MAIS RÁPIDO.<br />
+                  MAIS INTUITIVO.
+                </p>
+
+                <p style={artStyles.support}>
+                  ENCONTRE, ESCOLHA E<br/> RECEBA EM MINUTOS.
+                </p>
+              </div>
+
+              <div style={artStyles.button}>
+                ATUALIZE O APP
+              </div>
+
+            </div>
+
+            <div style={artStyles.mockupWrapper}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img 
+                src={iPhoneMockupUrl} 
+                alt="Look App Novo Design" 
+                style={artStyles.mockup}
+              />
+              <div style={artStyles.mockupShadow} />
+            </div>
+
+          </section>
+
+          <footer style={artStyles.artFooter}>
+            <span>WEARALOOK.COM</span>
+    
           </footer>
 
         </div>
