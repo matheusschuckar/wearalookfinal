@@ -13,7 +13,7 @@ const CATEGORY_OPTIONS = [
   "Roupas",
   "Calçados",
   "Acessórios",
-  "Casa",
+  "Casa e Arte", // 🔥 Atualizado
   "Viagem",
   "Bodycare",
 ] as const;
@@ -88,44 +88,67 @@ export default function NovoParceiroPage() {
   const stateOptions = useMemo(() => getStatesForCountry(country), [country]);
 
   // ----- UI HELPERS (BRUTALISTAS) -----
-  function SelectField({
+
+  // 🔥 CUSTOM SELECT (Adeus Safari/Chrome feio)
+  function CustomSelectField({
     label,
     value,
     onChange,
     options,
     disabled,
-    id,
+    placeholder = "Selecione..."
   }: {
     label?: string;
     value: string | number;
     onChange: (v: string) => void;
     options: { value: string | number; label: string }[];
     disabled?: boolean;
-    id?: string;
+    placeholder?: string;
   }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const selectedOption = options.find((o) => String(o.value) === String(value));
+
     return (
-      <div className="flex flex-col">
-        {label ? <label className="text-[10px] font-bold uppercase tracking-[1px] text-black/60 mb-2">{label}</label> : null}
-        <div className="relative">
-          <select
-            id={id}
-            value={String(value ?? "")}
-            onChange={(e) => onChange(e.target.value)}
-            disabled={disabled}
-            className={`appearance-none w-full rounded-none border border-black/20 px-4 py-3 text-sm bg-white focus:outline-none focus:border-black transition-colors ${disabled ? "opacity-50 cursor-not-allowed bg-black/5" : "cursor-pointer"} `}
-          >
-            {options.map((o) => (
-              <option key={String(o.value)} value={String(o.value)}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M6 9l6 6 6-6" stroke="#000" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter" />
-            </svg>
-          </div>
-        </div>
+      <div className="flex flex-col relative">
+        {label && <label className="text-[10px] font-bold uppercase tracking-[1px] text-black/60 mb-2">{label}</label>}
+        
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => setIsOpen(!isOpen)}
+          className={`flex items-center justify-between w-full rounded-none border border-black/20 px-4 py-3 text-sm bg-white focus:outline-none transition-colors ${disabled ? "opacity-50 cursor-not-allowed bg-black/5" : "cursor-pointer hover:border-black/50"}`}
+        >
+          <span className={selectedOption && selectedOption.value !== "" ? "text-black" : "text-black/40"}>
+            {selectedOption && selectedOption.value !== "" ? selectedOption.label : placeholder}
+          </span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+            <path d="M6 9l6 6 6-6" stroke="#000" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter" />
+          </svg>
+        </button>
+
+        {isOpen && !disabled && (
+          <>
+            {/* Overlay invisível para fechar ao clicar fora */}
+            <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
+            
+            <div className="absolute top-full mt-[-1px] left-0 w-full bg-white border border-black/20 z-20 max-h-64 overflow-y-auto shadow-[0_10px_40px_rgba(0,0,0,0.1)]">
+              {options.map((o) => (
+                <button
+                  key={String(o.value)}
+                  type="button"
+                  onClick={() => { onChange(String(o.value)); setIsOpen(false); }}
+                  className={`w-full text-left px-4 py-3 text-sm border-b border-black/5 transition-colors ${
+                    String(value) === String(o.value) 
+                    ? "bg-black/5 font-bold text-black" 
+                    : "text-black/70 hover:bg-black hover:text-white"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     );
   }
@@ -265,7 +288,7 @@ export default function NovoParceiroPage() {
           <div className="flex items-center gap-4 cursor-pointer" onClick={() => router.push("/")}>
             <span className="text-[20px] font-black tracking-tighter uppercase text-black">Look</span>
             <div className="h-4 w-[1px] bg-black/20" />
-            <span className="text-[11px] font-bold uppercase tracking-[2px] text-black/60">Brand Curation</span>
+            <span className="text-[11px] font-bold uppercase tracking-[2px] text-black/60 hidden sm:inline-block">Brand Curation</span>
           </div>
         </div>
       </header>
@@ -315,8 +338,8 @@ export default function NovoParceiroPage() {
             <TextField label="E-mail" value={contactEmail} onChange={setContactEmail} placeholder="contato@marca.com" type="email" required />
             <TextField label="Telefone / WhatsApp" value={contactPhone} onChange={setContactPhone} placeholder="+55 11 9xxxx-xxxx" required />
             
-            <SelectField label="País *" value={country} onChange={(v) => { setCountry(v); setStateCode(""); }} options={COUNTRY_OPTIONS.map((c) => ({ value: c.code, label: c.label }))} />
-            <SelectField label="Estado *" value={stateCode} onChange={(v) => setStateCode(v)} options={stateOptions.length ? [{ value: "", label: "Selecione o estado" }, ...stateOptions] : [{ value: "", label: "—" }]} disabled={stateOptions.length === 0} />
+            <CustomSelectField label="País *" value={country} onChange={(v) => { setCountry(v); setStateCode(""); }} options={COUNTRY_OPTIONS.map((c) => ({ value: c.code, label: c.label }))} />
+            <CustomSelectField label="Estado *" value={stateCode} onChange={(v) => setStateCode(v)} options={stateOptions.length ? [{ value: "", label: "Selecione..." }, ...stateOptions] : [{ value: "", label: "—" }]} disabled={stateOptions.length === 0} placeholder="Selecione o estado" />
             <TextField label="Cidade *" value={city} onChange={setCity} placeholder="Nome da cidade" required />
             
             <TextField label="Site Oficial (Opcional)" value={website} onChange={setWebsite} placeholder="https://" />
@@ -328,7 +351,7 @@ export default function NovoParceiroPage() {
                 <input
                   value={instagram}
                   onChange={(e) => setInstagram(e.target.value)}
-                  className="w-full rounded-none border border-black/20 border-r-0 px-4 py-3 text-sm bg-white focus:outline-none focus:border-black transition-colors"
+                  className="w-full rounded-none border border-black/20 border-r-0 px-4 py-3 text-sm bg-white placeholder:text-black/30 focus:outline-none focus:border-black transition-colors"
                   placeholder="handle (sem @)"
                 />
                 <a
@@ -390,12 +413,13 @@ export default function NovoParceiroPage() {
 
             {/* OUTROS */}
             <div className="flex flex-col gap-8">
-              <SelectField
+              <CustomSelectField
                 label="Anos de Operação (Opcional)"
                 value={yearsActive === "" ? "" : String(yearsActive)}
                 onChange={(v) => setYearsActive(v ? Number(v) : "")}
+                placeholder="Selecione..."
                 options={[
-                  { value: "", label: "—" },
+                  { value: "", label: "Selecione..." },
                   { value: "0", label: "Emerging — menos de 1 ano" },
                   { value: "1", label: "Established — 1 a 2 anos" },
                   { value: "3", label: "Recognized — 3 a 5 anos" },
@@ -410,19 +434,26 @@ export default function NovoParceiroPage() {
 
           {/* CONSENTIMENTO E AÇÕES */}
           <div className="flex flex-col gap-8 pb-12">
+            
+            {/* 🔥 CHECKBOX CUSTOMIZADO E SEGURO */}
             <label className="flex items-start gap-4 cursor-pointer group">
-              <div className="relative flex items-center justify-center mt-[2px]">
+              <div className="relative flex items-center justify-center mt-[2px] w-5 h-5 flex-shrink-0">
+                {/* Escondemos o input nativo visualmente, mas deixamos ele funcional para acessibilidade/forms */}
                 <input 
                   type="checkbox" 
                   checked={consent} 
                   onChange={(e) => setConsent(e.target.checked)} 
-                  className="appearance-none w-5 h-5 border border-black/30 bg-white checked:bg-black checked:border-black transition-colors"
+                  className="absolute opacity-0 w-0 h-0"
                 />
-                {consent && (
-                  <svg className="absolute w-3 h-3 text-white pointer-events-none" viewBox="0 0 14 14" fill="none">
-                    <path d="M2 7L5.5 10.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter"/>
-                  </svg>
-                )}
+                
+                {/* O desenho brutalista do Checkbox */}
+                <div className={`w-5 h-5 border flex items-center justify-center transition-colors ${consent ? 'bg-black border-black' : 'bg-white border-black/30 group-hover:border-black'}`}>
+                  {consent && (
+                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                      <path d="M2 7L5.5 10.5L12 3" stroke="white" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter"/>
+                    </svg>
+                  )}
+                </div>
               </div>
               <span className="text-sm text-black/70 leading-relaxed font-medium">
                 Autorizo o envio destas informações para o comitê editorial da Look. Confirmo que sou representante legal desta marca e li os <a href="/terms" className="text-black underline underline-offset-4 decoration-black/30 hover:decoration-black">Termos</a> e a <a href="/privacy" className="text-black underline underline-offset-4 decoration-black/30 hover:decoration-black">Política de Privacidade</a>.
