@@ -6,6 +6,7 @@ import Head from "next/head";
 export default function OpenAppPage() {
   const appStoreUrl =
     "https://apps.apple.com/br/app/look-moda-em-minutos/id6755046144";
+
   const iPhoneMockupUrl =
     "https://kuaoqzxqraeioqyhmnkw.supabase.co/storage/v1/object/public/product-images/Gray%20and%20Black%20Modern%20Handphone%20Mockup%20Instagram%20Story.png";
 
@@ -14,7 +15,6 @@ export default function OpenAppPage() {
   useEffect(() => {
     setDomReady(true);
 
-    // Apenas tenta abrir o app (sem forçar App Store)
     setTimeout(() => {
       window.location.href = "look://";
     }, 300);
@@ -27,14 +27,164 @@ export default function OpenAppPage() {
         <meta name="theme-color" content="#F6F3ED" />
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
       </Head>
 
       <style
         dangerouslySetInnerHTML={{
           __html: `
-        body { 
+        body {
+          margin: 0;
+          background-color: #F6F3ED;
+        }
+
+        @keyframes floatAnimation {
+          0% { transform: translateY(0px); }
+          50% { transform: translateY(-12px); }
+          100% { transform: translateY(0px); }
+        }
+
+        .container {
+          max-width: 480px;
+          margin: 0 auto;
+          padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom);
+        }
+
+        @media (min-width: 900px) {
+          .container {
+            max-width: 1100px;
+          }
+
+          .grid {
+            display: grid;
+            grid-template-columns: 1.1fr 1fr;
+            align-items: center;
+            gap: 60px;
+          }
+        }
+      `,
+        }}
+      />
+
+      <main style={{ ...styles.main, opacity: domReady ? 1 : 0 }}>
+        <div className="container">
+          <header style={styles.header}>
+            <span style={{ fontWeight: 800 }}>Look</span>
+          </header>
+
+          <div className="grid">
+            {/* TEXT */}
+            <div style={styles.textColumn}>
+              <span style={styles.kicker}>MODA EM MINUTOS</span>
+
+              <h1 style={styles.title}>
+                A moda que você quer,
+                <br />
+                na hora que você quer.
+              </h1>
+
+              <p style={styles.subtitle}>
+                As melhores marcas, entregues em minutos.
+              </p>
+
+              <div style={styles.ctaBox}>
+                <a href={appStoreUrl} style={styles.button}>
+                  Abrir na App Store →
+                </a>
+              </div>
+            </div>
+
+            {/* IMAGE */}
+            <div style={styles.imageWrapper}>
+              <img
+                src={iPhoneMockupUrl}
+                alt="Look App"
+                style={styles.image}
+              />
+            </div>
+          </div>
+
+          <footer style={styles.footer}>© LOOK</footer>
+        </div>
+      </main>
+    </>
+  );
+}
+
+// STYLES
+
+const styles: Record<string, CSSProperties> = {
+  main: {
+    minHeight: "100vh",
+    fontFamily:
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto',
+    transition: "opacity 0.5s",
+  },
+
+  header: {
+    padding: "12px 0 24px",
+    fontSize: "18px",
+  },
+
+  textColumn: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+  },
+
+  kicker: {
+    fontSize: "11px",
+    letterSpacing: "1.5px",
+    color: "#888",
+  },
+
+  title: {
+    fontSize: "34px",
+    lineHeight: 1.1,
+    margin: 0,
+  },
+
+  subtitle: {
+    fontSize: "15px",
+    color: "rgba(0,0,0,0.65)",
+  },
+
+  ctaBox: {
+    marginTop: "12px",
+  },
+
+  button: {
+    display: "block",
+    width: "100%",
+    textAlign: "center",
+    backgroundColor: "#000",
+    color: "#fff",
+    padding: "16px",
+    borderRadius: "8px",
+    textDecoration: "none",
+    fontWeight: 600,
+  },
+
+  imageWrapper: {
+    marginTop: "40px",
+    display: "flex",
+    justifyContent: "center",
+  },
+
+  image: {
+    width: "100%",
+    maxWidth: "280px",
+    animation: "floatAnimation 6s ease-in-out infinite",
+  },
+
+  footer: {
+    marginTop: "40px",
+    fontSize: "11px",
+    color: "#aaa",
+    textAlign: "center",
+  },
+};        body { 
           margin: 0; 
           background-color: #F6F3ED; 
           overflow-x: hidden; 
