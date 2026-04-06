@@ -5,8 +5,9 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
-const SURFACE = "#F7F4EF";
-const BORDER = "#E5E0DA";
+// Cores do Ecossistema Brutalista
+const SURFACE = "#F6F3ED";
+const BORDER = "rgba(0,0,0,0.15)";
 
 const CATEGORY_OPTIONS = [
   "Roupas",
@@ -86,7 +87,7 @@ export default function NovoParceiroPage() {
 
   const stateOptions = useMemo(() => getStatesForCountry(country), [country]);
 
-  // ----- Small UI helpers (styled inputs/selects) -----
+  // ----- UI HELPERS (BRUTALISTAS) -----
   function SelectField({
     label,
     value,
@@ -103,15 +104,15 @@ export default function NovoParceiroPage() {
     id?: string;
   }) {
     return (
-      <div>
-        {label ? <label className="text-xs font-medium text-neutral-700">{label}</label> : null}
-        <div className="relative mt-2">
+      <div className="flex flex-col">
+        {label ? <label className="text-[10px] font-bold uppercase tracking-[1px] text-black/60 mb-2">{label}</label> : null}
+        <div className="relative">
           <select
             id={id}
             value={String(value ?? "")}
             onChange={(e) => onChange(e.target.value)}
             disabled={disabled}
-            className={`appearance-none w-full rounded-xl border px-3 py-2 pr-10 text-sm bg-white ${disabled ? "opacity-60 cursor-not-allowed" : "hover:border-neutral-400"} `}
+            className={`appearance-none w-full rounded-none border border-black/20 px-4 py-3 text-sm bg-white focus:outline-none focus:border-black transition-colors ${disabled ? "opacity-50 cursor-not-allowed bg-black/5" : "cursor-pointer"} `}
           >
             {options.map((o) => (
               <option key={String(o.value)} value={String(o.value)}>
@@ -119,9 +120,9 @@ export default function NovoParceiroPage() {
               </option>
             ))}
           </select>
-          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M6 9l6 6 6-6" stroke="#7C6E61" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M6 9l6 6 6-6" stroke="#000" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter" />
             </svg>
           </div>
         </div>
@@ -136,6 +137,7 @@ export default function NovoParceiroPage() {
     placeholder,
     id,
     required,
+    type = "text"
   }: {
     label?: string;
     value: string;
@@ -143,22 +145,24 @@ export default function NovoParceiroPage() {
     placeholder?: string;
     id?: string;
     required?: boolean;
+    type?: string;
   }) {
     return (
-      <div>
-        {label ? <label className="text-xs font-medium text-neutral-700">{label}{required ? " *" : ""}</label> : null}
+      <div className="flex flex-col">
+        {label ? <label className="text-[10px] font-bold uppercase tracking-[1px] text-black/60 mb-2">{label}{required ? " *" : ""}</label> : null}
         <input
           id={id}
+          type={type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="mt-2 w-full rounded-xl border px-3 py-2 text-sm bg-white"
+          className="w-full rounded-none border border-black/20 px-4 py-3 text-sm bg-white placeholder:text-black/30 focus:outline-none focus:border-black transition-colors"
         />
       </div>
     );
   }
 
-  // ----- rest unchanged logic -----
+  // ----- LOGIC -----
   function toggleCategory(cat: Category) {
     setCategories((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
   }
@@ -167,13 +171,11 @@ export default function NovoParceiroPage() {
     if (!brandName.trim()) return "Preencha o nome da marca.";
     if (!contactName.trim()) return "Preencha o nome do contato.";
     if (!contactEmail.trim()) return "Preencha o e-mail de contato.";
-    // simple email regex
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())) return "E-mail inválido.";
     if (!contactPhone.trim()) return "Preencha o telefone/WhatsApp.";
     if (!instagram.trim()) return "Precisamos do perfil no Instagram para avaliação.";
     if (categories.length === 0) return "Selecione pelo menos um tipo de produto.";
     if (!stockReady) return "Informe disponibilidade de estoque.";
-    // country/state/city validations
     if (!country) return "Selecione um país.";
     if (stateOptions.length > 0 && !stateCode) return "Selecione o estado.";
     if (!city.trim()) return "Preencha a cidade.";
@@ -189,6 +191,7 @@ export default function NovoParceiroPage() {
     const err = validate();
     if (err) {
       setNotice(err);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -225,8 +228,9 @@ export default function NovoParceiroPage() {
 
       const proto = `BLK-${String(data.id).padStart(6, "0")}`;
       setSuccessProtocol(proto);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
 
-      // limpar formulário parcialmente e exibir confirmação elegante
+      // Limpar formulário
       setBrandName("");
       setContactName("");
       setContactRole("");
@@ -253,260 +257,198 @@ export default function NovoParceiroPage() {
   }
 
   return (
-    <main className="min-h-screen" style={{ backgroundColor: SURFACE }}>
+    <main className="min-h-screen" style={{ backgroundColor: SURFACE, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
+      
+      {/* HEADER EDITORIAL */}
       <header className="w-full border-b" style={{ borderColor: BORDER }}>
-        <div className="mx-auto max-w-6xl px-8 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="h-8 w-8 rounded-full bg-black flex items-center justify-center">
-              <span className="text-[13px] font-semibold text-white">L</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold text-black">Look</span>
-              <span className="text-[11px] text-neutral-500">Novos parceiros</span>
-            </div>
+        <div className="mx-auto max-w-6xl px-8 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-4 cursor-pointer" onClick={() => router.push("/")}>
+            <span className="text-[20px] font-black tracking-tighter uppercase text-black">Look</span>
+            <div className="h-4 w-[1px] bg-black/20" />
+            <span className="text-[11px] font-bold uppercase tracking-[2px] text-black/60">Brand Curation</span>
           </div>
-          <div />
         </div>
       </header>
 
-      <div className="mx-auto max-w-4xl px-6 py-12">
-        <div className="rounded-3xl p-10" style={{ background: "rgba(255,255,255,0.75)", border: `1px solid ${BORDER}`, backdropFilter: "blur(6px)" }}>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div>
-              <h1 className="text-[28px] font-semibold text-black leading-tight">
-                Candidate sua marca à curadoria Look
-              </h1>
-              <p className="mt-2 text-neutral-600 max-w-xl">
-                Envie as informações essenciais e nosso time editorial fará uma avaliação criteriosa. Você recebe resposta personalizada em até 5 dias úteis.
-              </p>
-            </div>
+      <div className="mx-auto max-w-4xl px-6 py-16">
+        
+        {/* HEADER DO FORMULÁRIO */}
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8 mb-12">
+          <div>
+            <h1 className="text-4xl md:text-[44px] font-bold text-black leading-[1.05] tracking-tighter uppercase">
+              Application<br/>Dossier.
+            </h1>
+            <p className="mt-4 text-sm font-medium text-black/60 max-w-xl leading-relaxed">
+              Submeta sua marca para a curadoria Look. Nosso comitê editorial avaliará identidade, qualidade de produção e fit estético em até 5 dias úteis.
+            </p>
+          </div>
+          <div className="md:text-right border-l-2 md:border-l-0 md:border-r-2 border-black pl-4 md:pl-0 md:pr-4 py-1">
+            <div className="text-[10px] font-bold uppercase tracking-[1px] text-black/50">Tempo estimado</div>
+            <div className="mt-1 text-sm font-bold uppercase tracking-wide text-black">Até 5 dias úteis</div>
+          </div>
+        </div>
 
-            <div className="text-right">
-              <div className="text-sm text-neutral-500">Tempo médio de resposta</div>
-              <div className="mt-1 text-lg font-semibold">Até 5 dias úteis</div>
+        {/* NOTICES BRUTALISTAS */}
+        {notice && (
+          <div className="mb-8 p-4 bg-red-600 text-white text-[11px] font-bold uppercase tracking-[1px]">
+            {notice}
+          </div>
+        )}
+
+        {successProtocol && (
+          <div className="mb-8 p-6 bg-black text-white flex flex-col gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-[2px] text-white/60">Status: Recebido</span>
+            <span className="text-lg font-medium leading-tight">
+              Sua inscrição foi registrada com o protocolo <span className="font-bold">{successProtocol}</span>.
+            </span>
+            <span className="text-sm text-white/70 mt-2">Nossa equipe de curadoria entrará em contato em breve.</span>
+          </div>
+        )}
+
+        {/* FORMULÁRIO */}
+        <form onSubmit={handleSubmit} className="space-y-10">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
+            <TextField label="Marca" value={brandName} onChange={setBrandName} placeholder="Ex.: Valentino" required />
+            <TextField label="Pessoa de Contato" value={contactName} onChange={setContactName} placeholder="Nome completo" required />
+            <TextField label="Cargo (Opcional)" value={contactRole} onChange={setContactRole} placeholder="Ex.: Founder, Head of Brand" />
+            <TextField label="E-mail" value={contactEmail} onChange={setContactEmail} placeholder="contato@marca.com" type="email" required />
+            <TextField label="Telefone / WhatsApp" value={contactPhone} onChange={setContactPhone} placeholder="+55 11 9xxxx-xxxx" required />
+            
+            <SelectField label="País *" value={country} onChange={(v) => { setCountry(v); setStateCode(""); }} options={COUNTRY_OPTIONS.map((c) => ({ value: c.code, label: c.label }))} />
+            <SelectField label="Estado *" value={stateCode} onChange={(v) => setStateCode(v)} options={stateOptions.length ? [{ value: "", label: "Selecione o estado" }, ...stateOptions] : [{ value: "", label: "—" }]} disabled={stateOptions.length === 0} />
+            <TextField label="Cidade *" value={city} onChange={setCity} placeholder="Nome da cidade" required />
+            
+            <TextField label="Site Oficial (Opcional)" value={website} onChange={setWebsite} placeholder="https://" />
+            
+            {/* Input Composto Brutalista */}
+            <div className="flex flex-col">
+              <label className="text-[10px] font-bold uppercase tracking-[1px] text-black/60 mb-2">Instagram *</label>
+              <div className="flex">
+                <input
+                  value={instagram}
+                  onChange={(e) => setInstagram(e.target.value)}
+                  className="w-full rounded-none border border-black/20 border-r-0 px-4 py-3 text-sm bg-white focus:outline-none focus:border-black transition-colors"
+                  placeholder="handle (sem @)"
+                />
+                <a
+                  href={instagram ? `https://instagram.com/${instagram.replace(/^@/, "")}` : "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-center px-6 bg-black text-white text-[10px] font-bold uppercase tracking-[1px] whitespace-nowrap hover:bg-neutral-800 transition-colors"
+                >
+                  Testar
+                </a>
+              </div>
             </div>
           </div>
 
-          <hr className="my-6 border-t" style={{ borderColor: BORDER }} />
+          <hr className="border-t border-black/10" />
 
-          {notice ? (
-            <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-amber-900 text-sm">
-              {notice}
+          {/* CATEGORIAS */}
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-[1px] text-black/60 mb-4 block">
+              Tipo(s) de Produto *
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {CATEGORY_OPTIONS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => toggleCategory(c)}
+                  className={`text-[11px] font-bold uppercase tracking-[1px] py-4 border transition-colors ${categories.includes(c) ? "bg-black text-white border-black" : "bg-white text-black border-black/20 hover:border-black/50"}`}
+                >
+                  {c}
+                </button>
+              ))}
             </div>
-          ) : null}
+          </div>
 
-          {successProtocol ? (
-            <div className="mb-4 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-emerald-900">
-              Inscrição recebida • protocolo <span className="font-medium">{successProtocol}</span>. Em breve enviaremos um e-mail com o parecer.
-            </div>
-          ) : null}
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-medium text-neutral-700">Marca *</label>
-                <input
-                  value={brandName}
-                  onChange={(e) => setBrandName(e.target.value)}
-                  className="mt-2 w-full rounded-xl border px-3 py-2 text-sm"
-                  placeholder="Ex.: Valentino"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-neutral-700">Pessoa de contato *</label>
-                <input
-                  value={contactName}
-                  onChange={(e) => setContactName(e.target.value)}
-                  className="mt-2 w-full rounded-xl border px-3 py-2 text-sm"
-                  placeholder="Nome completo"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-neutral-700">Cargo (opcional)</label>
-                <input
-                  value={contactRole}
-                  onChange={(e) => setContactRole(e.target.value)}
-                  className="mt-2 w-full rounded-xl border px-3 py-2 text-sm"
-                  placeholder="Founder, Head of Brand..."
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-neutral-700">E-mail *</label>
-                <input
-                  value={contactEmail}
-                  onChange={(e) => setContactEmail(e.target.value)}
-                  className="mt-2 w-full rounded-xl border px-3 py-2 text-sm"
-                  type="email"
-                  placeholder="contato@marca.com"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-neutral-700">Telefone / WhatsApp *</label>
-                <input
-                  value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
-                  className="mt-2 w-full rounded-xl border px-3 py-2 text-sm"
-                  placeholder="+55 11 9xxxx-xxxx"
-                />
-              </div>
-
-              <div>
-                <SelectField
-                  label="País *"
-                  value={country}
-                  onChange={(v) => { setCountry(v); setStateCode(""); }}
-                  options={COUNTRY_OPTIONS.map((c) => ({ value: c.code, label: c.label }))}
-                />
-              </div>
-
-              <div>
-                <SelectField
-                  label="Estado *"
-                  value={stateCode}
-                  onChange={(v) => setStateCode(v)}
-                  options={stateOptions.length ? [{ value: "", label: "Selecione o estado" }, ...stateOptions] : [{ value: "", label: "—" }]}
-                  disabled={stateOptions.length === 0}
-                />
-              </div>
-
-              <div>
-                <TextField
-                  label="Cidade *"
-                  value={city}
-                  onChange={(v) => setCity(v)}
-                  placeholder="Cidade"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-neutral-700">Site oficial (opcional)</label>
-                <input
-                  value={website}
-                  onChange={(e) => setWebsite(e.target.value)}
-                  className="mt-2 w-full rounded-xl border px-3 py-2 text-sm"
-                  placeholder="https://"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-neutral-700">Instagram *</label>
-                <div className="mt-2 flex">
-                  <input
-                    value={instagram}
-                    onChange={(e) => setInstagram(e.target.value)}
-                    className="w-full rounded-l-xl border border-r-0 px-3 py-2 text-sm"
-                    placeholder="handle (sem @)"
-                  />
-                  <a
-                    href={instagram ? `https://instagram.com/${instagram.replace(/^@/, "")}` : "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-r-xl border border-l-0 px-3 py-2 text-sm bg-white/80"
-                  >
-                    Abrir
-                  </a>
-                </div>
-              </div>
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* ESTOQUE */}
             <div>
-              <label className="text-xs font-medium text-neutral-700">Tipo(s) de produto (selecione) *</label>
-              <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {CATEGORY_OPTIONS.map((c) => (
+              <label className="text-[10px] font-bold uppercase tracking-[1px] text-black/60 mb-4 block">
+                Disponibilidade de Estoque *
+              </label>
+              <div className="flex flex-col gap-3">
+                {[
+                  { value: "yes", label: "Estoque Pronto" },
+                  { value: "no", label: "Sem Estoque Imediato" },
+                  { value: "on_demand", label: "Produção sob Demanda" }
+                ].map((opt) => (
                   <button
-                    key={c}
+                    key={opt.value}
                     type="button"
-                    onClick={() => toggleCategory(c)}
-                    className={`text-sm px-3 py-2 rounded-xl border transition ${categories.includes(c) ? "bg-black text-white border-black" : "bg-white border-neutral-300 hover:bg-neutral-50"}`}
+                    onClick={() => setStockReady(opt.value as any)}
+                    className={`text-left text-xs font-bold uppercase tracking-[1px] px-4 py-3 border transition-colors ${stockReady === opt.value ? "bg-black text-white border-black" : "bg-white text-black border-black/20 hover:border-black/50"}`}
                   >
-                    {c}
+                    {opt.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="text-xs font-medium text-neutral-700">Estoque pronto para envio *</label>
-                <div className="mt-2 flex gap-2">
-                  <label className={`px-3 py-2 rounded-xl border ${stockReady === "yes" ? "bg-black text-white border-black" : "bg-white border-neutral-300"}`}>
-                    <input className="hidden" type="radio" name="stock" checked={stockReady === "yes"} onChange={() => setStockReady("yes")} />
-                    Sim
-                  </label>
-                  <label className={`px-3 py-2 rounded-xl border ${stockReady === "no" ? "bg-black text-white border-black" : "bg-white border-neutral-300"}`}>
-                    <input className="hidden" type="radio" name="stock" checked={stockReady === "no"} onChange={() => setStockReady("no")} />
-                    Não
-                  </label>
-                  <label className={`px-3 py-2 rounded-xl border ${stockReady === "on_demand" ? "bg-black text-white border-black" : "bg-white border-neutral-300"}`}>
-                    <input className="hidden" type="radio" name="stock" checked={stockReady === "on_demand"} onChange={() => setStockReady("on_demand")} />
-                    Produção sob demanda
-                  </label>
-                </div>
-              </div>
+            {/* OUTROS */}
+            <div className="flex flex-col gap-8">
+              <SelectField
+                label="Anos de Operação (Opcional)"
+                value={yearsActive === "" ? "" : String(yearsActive)}
+                onChange={(v) => setYearsActive(v ? Number(v) : "")}
+                options={[
+                  { value: "", label: "—" },
+                  { value: "0", label: "Emerging — menos de 1 ano" },
+                  { value: "1", label: "Established — 1 a 2 anos" },
+                  { value: "3", label: "Recognized — 3 a 5 anos" },
+                  { value: "6", label: "Legacy — mais de 5 anos" },
+                ]}
+              />
+              <TextField label="Como nos encontrou? (Opcional)" value={howFound} onChange={setHowFound} placeholder="Ex.: Instagram, Indicação..." />
+            </div>
+          </div>
 
-              <div>
-                <SelectField
-                  label="Anos de operação (opcional)"
-                  value={yearsActive === "" ? "" : String(yearsActive)}
-                  onChange={(v) => setYearsActive(v ? Number(v) : "")}
-                  options={[
-                    { value: "", label: "—" },
-                    { value: "0", label: "Emerging — menos de 1 ano" },
-                    { value: "1", label: "Established — 1–2 anos" },
-                    { value: "3", label: "Recognized — 3–5 anos" },
-                    { value: "6", label: "Legacy — 5+ anos" },
-                  ]}
+          <hr className="border-t border-black/10" />
+
+          {/* CONSENTIMENTO E AÇÕES */}
+          <div className="flex flex-col gap-8 pb-12">
+            <label className="flex items-start gap-4 cursor-pointer group">
+              <div className="relative flex items-center justify-center mt-[2px]">
+                <input 
+                  type="checkbox" 
+                  checked={consent} 
+                  onChange={(e) => setConsent(e.target.checked)} 
+                  className="appearance-none w-5 h-5 border border-black/30 bg-white checked:bg-black checked:border-black transition-colors"
                 />
+                {consent && (
+                  <svg className="absolute w-3 h-3 text-white pointer-events-none" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 7L5.5 10.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter"/>
+                  </svg>
+                )}
               </div>
+              <span className="text-sm text-black/70 leading-relaxed font-medium">
+                Autorizo o envio destas informações para o comitê editorial da Look. Confirmo que sou representante legal desta marca e li os <a href="/terms" className="text-black underline underline-offset-4 decoration-black/30 hover:decoration-black">Termos</a> e a <a href="/privacy" className="text-black underline underline-offset-4 decoration-black/30 hover:decoration-black">Política de Privacidade</a>.
+              </span>
+            </label>
 
-              <div>
-                <label className="text-xs font-medium text-neutral-700">Como nos encontrou (opcional)</label>
-                <input value={howFound} onChange={(e) => setHowFound(e.target.value)} className="mt-2 w-full rounded-xl border px-3 py-2 text-sm" placeholder="Ex.: Instagram / Indicação" />
-              </div>
+            <div className="flex flex-col-reverse md:flex-row items-stretch md:items-center justify-end gap-4 mt-4">
+              <button
+                type="button"
+                onClick={() => router.push("/")}
+                className="h-14 px-8 border border-black/20 bg-transparent text-black text-[11px] font-bold uppercase tracking-[2px] hover:bg-black/5 transition-colors"
+              >
+                Voltar
+              </button>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className={`h-14 px-8 text-[11px] font-bold uppercase tracking-[2px] text-white transition-colors ${submitting ? "bg-neutral-400 cursor-not-allowed" : "bg-black hover:bg-neutral-800"}`}
+              >
+                {submitting ? "Processando..." : "Submeter Aplicação"}
+              </button>
             </div>
+          </div>
 
-            <div className="flex items-start gap-3">
-              <input id="consent" type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1" />
-              <label htmlFor="consent" className="text-sm text-neutral-700">
-                Eu autorizo o envio destas informações para análise editorial e confirmo que represento esta marca. Li a{" "}
-                <a href="/privacy" className="underline">política de privacidade</a>.
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between gap-4">
-              <div className="text-sm text-neutral-500">
-                <div>Submissões passam por curadoria.</div>
-                <div>Resposta em até 5 dias úteis.</div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => router.push("/")}
-                  className="h-11 px-6 rounded-full border border-neutral-300 bg-white/70 text-sm"
-                >
-                  Voltar
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className={`h-11 px-6 rounded-full text-sm font-medium text-white ${submitting ? "bg-neutral-600" : "bg-black hover:opacity-90"}`}
-                >
-                  {submitting ? "Enviando..." : "Enviar inscrição"}
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-
-        <p className="mt-6 text-xs text-neutral-500 max-w-2xl">
-          Nota: mantemos curadoria de excelência. A inscrição não garante listagem imediata; avaliaremos identidade, qualidade de produção e fit estético.
-        </p>
+        </form>
       </div>
     </main>
   );
