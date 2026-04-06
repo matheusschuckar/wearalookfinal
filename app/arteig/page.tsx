@@ -56,7 +56,7 @@ export default function IGArtGeneratorPage() {
                 </p>
 
                 <p style={artStyles.support}>
-                  ENCONTRE, ESCOLHA E RECEBA EM MINUTOS.
+                  ENCONTRE, ESCOLHA E<br/> RECEBA EM MINUTOS.
                 </p>
               </div>
 
@@ -80,7 +80,7 @@ export default function IGArtGeneratorPage() {
 
           <footer style={artStyles.artFooter}>
             <span>WEARALOOK.COM</span>
-            
+            <span>© 2026 // SÃO PAULO, BR</span>
           </footer>
 
         </div>
@@ -121,7 +121,7 @@ const artStyles: Record<string, CSSProperties> = {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   },
   heroTextSection: {
-    padding: "100px 90px 40px 90px",
+    padding: "90px 80px 40px 80px",
     position: "relative",
     zIndex: 20, // Título fica em cima de tudo
   },
@@ -151,69 +151,71 @@ const artStyles: Record<string, CSSProperties> = {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    maxWidth: "520px", 
-    gap: "40px",
+    maxWidth: "580px", 
+    gap: "50px",
     position: "relative",
     zIndex: 20, // O texto de apoio e o botão ficam por cima do celular
   },
   dossierHeader: {
     display: "flex",
     alignItems: "center",
-    gap: "16px",
+    gap: "24px",
   },
   logo: {
-    fontSize: "40px", 
+    fontSize: "48px", 
     fontWeight: 900,
     letterSpacing: "-2px",
   },
   block: {
     display: "flex",
     flexDirection: "column",
-    gap: "20px",
+    gap: "24px",
   },
   subtitle: {
-    fontSize: "40px", 
-    fontWeight: 700,
+    fontSize: "48px", 
+    fontWeight: 800,
     color: "#000",
-    lineHeight: "1.15",
+    lineHeight: "1.1",
+    letterSpacing: "-1px",
     margin: 0,
   },
   support: {
-    fontSize: "22px", 
-    fontWeight: 500,
-    color: "rgba(0,0,0,0.7)",
-    lineHeight: "1.4",
+    fontSize: "30px", 
+    fontWeight: 600,
+    color: "rgba(0,0,0,0.6)",
+    lineHeight: "1.3",
     margin: 0,
   },
   button: {
     backgroundColor: "#000",
     color: "#fff",
-    padding: "20px 32px",
-    fontSize: "14px",
-    fontWeight: 800,
-    letterSpacing: "2px",
+    padding: "24px 40px", 
+    fontSize: "24px", 
+    fontWeight: 900,
+    letterSpacing: "3px",
     textTransform: "uppercase",
     width: "fit-content",
+    marginTop: "10px",
   },
   mockupWrapper: {
     position: "absolute",
-    right: "-100px", 
-    bottom: "-180px", 
+    right: "-120px", 
+    bottom: "-220px", 
     animation: "floatArtAnimation 6s ease-in-out infinite",
     zIndex: 15, // Celular por cima da linha (10), mas embaixo do texto (20)
   },
   mockup: {
-    height: "980px", // 🔥 Ajuste cirúrgico: Diminuído para criar o respiro perfeito abaixo de 'MINUTES.'
+    height: "1150px", 
     transform: "rotate(-4deg)",
   },
   mockupShadow: {
     position: "absolute",
-    bottom: "200px",
+    bottom: "220px",
     left: "150px",
     width: "350px",
-    height: "40px",
-    backgroundColor: "rgba(0,0,0,0.25)",
-    filter: "blur(30px)",
+    height: "50px",
+    backgroundColor: "rgba(0,0,0,0.3)",
+    filter: "blur(40px)",
     transform: "rotate(-4deg)",
     zIndex: -1,
   },
@@ -221,11 +223,11 @@ const artStyles: Record<string, CSSProperties> = {
     display: "flex",
     justifyContent: "space-between",
     padding: "40px 80px",
-    fontSize: "16px",
-    fontWeight: 700,
-    letterSpacing: "3px",
+    fontSize: "22px", 
+    fontWeight: 800,
+    letterSpacing: "4px",
     color: "rgba(0,0,0,0.35)",
-    borderTop: "1px solid rgba(0,0,0,0.05)",
+    borderTop: "2px solid rgba(0,0,0,0.05)",
     position: "relative",
     zIndex: 20, // Garante que o footer não seja engolido pela sombra
   }
