@@ -356,8 +356,10 @@ const styles: Record<string, CSSProperties> = {
     maxWidth: "320px",
     animation: "floatAnimation 6s ease-in-out infinite",
   },
-  footer: {
-    padding: "20px",
+    footer: {
+    marginTop: "40px",
+    fontSize: "11px",
+    color: "#aaa",
     textAlign: "center",
   },
 };
