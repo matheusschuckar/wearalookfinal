@@ -43,24 +43,32 @@ export default function IGArtGeneratorPage() {
           <section style={artStyles.dossierSection}>
             
             <div style={artStyles.textDossier}>
+              
               <header style={artStyles.dossierHeader}>
                 <span style={artStyles.logo}>LOOK</span>
                 <span style={artStyles.versionLabel}>NOVO DESIGN</span>
               </header>
 
               <div style={artStyles.block}>
-                <span style={artStyles.kicker}>REDESENHAMOS A EXPERIÊNCIA</span>
+                <span style={artStyles.kicker}>
+                  REDESENHAMOS A EXPERIÊNCIA
+                </span>
+
                 <p style={artStyles.subtitle}>
-                  UM NOVO DESIGN,<br />
-                  MAIS RÁPIDO, MAIS INTUITIVO.<br />
-                  ENCONTRE, ESCOLHA E RECEBA<br />
-                  EM MINUTOS.
+                  UM NOVO DESIGN.<br />
+                  MAIS RÁPIDO.<br />
+                  MAIS INTUITIVO.
+                </p>
+
+                <p style={artStyles.support}>
+                  ENCONTRE, ESCOLHA E RECEBA EM MINUTOS.
                 </p>
               </div>
 
               <div style={artStyles.button}>
                 BAIXAR O APP
               </div>
+
             </div>
 
             <div style={artStyles.mockupWrapper}>
@@ -71,6 +79,7 @@ export default function IGArtGeneratorPage() {
               />
               <div style={artStyles.mockupShadow} />
             </div>
+
           </section>
 
           <footer style={artStyles.artFooter}>
@@ -115,7 +124,7 @@ const artStyles: Record<string, CSSProperties> = {
     boxSizing: "border-box",
   },
   heroTextSection: {
-    padding: "100px 90px 50px 90px",
+    padding: "100px 90px 40px 90px",
   },
   heroTitle: {
     fontSize: "120px",
@@ -142,47 +151,54 @@ const artStyles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     maxWidth: "520px",
-    gap: "60px",
+    gap: "40px",
   },
   dossierHeader: {
     display: "flex",
     alignItems: "center",
-    gap: "20px",
+    gap: "16px",
   },
   logo: {
-    fontSize: "34px",
+    fontSize: "40px",
     fontWeight: 900,
     letterSpacing: "-2px",
   },
   versionLabel: {
-    fontSize: "11px",
+    fontSize: "14px",
     fontWeight: 700,
     letterSpacing: "3px",
-    color: "rgba(0,0,0,0.4)",
+    color: "rgba(0,0,0,0.5)",
   },
   block: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "20px",
   },
   kicker: {
-    fontSize: "11px",
+    fontSize: "14px",
     fontWeight: 700,
     letterSpacing: "3px",
-    color: "#999",
+    color: "#777",
   },
   subtitle: {
-    fontSize: "28px",
-    fontWeight: 600,
-    color: "rgba(0,0,0,0.85)",
-    lineHeight: "1.35",
+    fontSize: "40px",
+    fontWeight: 700,
+    color: "#000",
+    lineHeight: "1.15",
+    margin: 0,
+  },
+  support: {
+    fontSize: "22px",
+    fontWeight: 500,
+    color: "rgba(0,0,0,0.7)",
+    lineHeight: "1.4",
     margin: 0,
   },
   button: {
     backgroundColor: "#000",
     color: "#fff",
-    padding: "18px 26px",
-    fontSize: "12px",
+    padding: "20px 32px",
+    fontSize: "14px",
     fontWeight: 800,
     letterSpacing: "2px",
     textTransform: "uppercase",
@@ -212,7 +228,7 @@ const artStyles: Record<string, CSSProperties> = {
     display: "flex",
     justifyContent: "space-between",
     padding: "40px 90px",
-    fontSize: "14px",
+    fontSize: "16px",
     fontWeight: 700,
     letterSpacing: "3px",
     color: "rgba(0,0,0,0.35)",
