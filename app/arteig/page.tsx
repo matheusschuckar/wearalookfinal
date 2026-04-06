@@ -80,7 +80,7 @@ export default function IGArtGeneratorPage() {
 
           <footer style={artStyles.artFooter}>
             <span>WEARALOOK.COM</span>
-            <span>© 2026 // SÃO PAULO, BR</span>
+          
           </footer>
 
         </div>
