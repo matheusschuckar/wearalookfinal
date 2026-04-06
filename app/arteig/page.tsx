@@ -221,4 +221,31 @@ const artStyles: Record<string, CSSProperties> = {
     zIndex: 1, // Fica atrás do texto se por acaso tocar (mas não tocará)
   },
   mockup: {
-    height:
+    height: "1100px", // Mockup GIGANTE na base
+    width: "auto",
+    position: "relative",
+    zIndex: 2,
+    transform: "rotate(-6deg)", // Inclinação agressiva editorial
+  },
+  mockupShadow: {
+    position: "absolute",
+    bottom: "200px",
+    left: "150px",
+    width: "350px",
+    height: "40px",
+    backgroundColor: "rgba(0,0,0,0.3)",
+    filter: "blur(30px)",
+    transform: "rotate(-6deg)",
+    zIndex: 1,
+  },
+  artFooter: {
+    display: "flex",
+    justifyContent: "space-between",
+    padding: "40px 90px",
+    fontSize: "16px",
+    fontWeight: 700,
+    letterSpacing: "3px",
+    color: "rgba(0,0,0,0.3)",
+    borderTop: "1px solid rgba(0,0,0,0.05)",
+  }
+};
