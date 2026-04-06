@@ -67,7 +67,6 @@ export default function IGArtGeneratorPage() {
             </div>
 
             <div style={artStyles.mockupWrapper}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img 
                 src={iPhoneMockupUrl} 
                 alt="Look App Novo Design" 
@@ -123,23 +122,23 @@ const artStyles: Record<string, CSSProperties> = {
   heroTextSection: {
     padding: "90px 80px 40px 80px",
     position: "relative",
-    zIndex: 20, // Título fica em cima de tudo
+    zIndex: 20,
   },
   heroTitle: {
-    fontSize: "145px", 
+    fontSize: "145px",
     fontWeight: 900,
-    letterSpacing: "-8px", 
-    lineHeight: "0.85", 
+    letterSpacing: "-8px",
+    lineHeight: "0.85",
     color: "#000",
     textTransform: "uppercase",
     margin: 0,
   },
   divider: {
-    height: "2px", 
+    height: "2px",
     backgroundColor: "#000",
     margin: "0 80px",
     position: "relative",
-    zIndex: 10, // A linha fica por baixo do celular (que tem zIndex 15)
+    zIndex: 10,
   },
   dossierSection: {
     flex: 1,
@@ -151,10 +150,10 @@ const artStyles: Record<string, CSSProperties> = {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    maxWidth: "580px", 
+    maxWidth: "580px",
     gap: "50px",
     position: "relative",
-    zIndex: 20, // O texto de apoio e o botão ficam por cima do celular
+    zIndex: 20,
   },
   dossierHeader: {
     display: "flex",
@@ -162,7 +161,7 @@ const artStyles: Record<string, CSSProperties> = {
     gap: "24px",
   },
   logo: {
-    fontSize: "48px", 
+    fontSize: "48px",
     fontWeight: 900,
     letterSpacing: "-2px",
   },
@@ -172,7 +171,7 @@ const artStyles: Record<string, CSSProperties> = {
     gap: "24px",
   },
   subtitle: {
-    fontSize: "48px", 
+    fontSize: "48px",
     fontWeight: 800,
     color: "#000",
     lineHeight: "1.1",
@@ -180,7 +179,7 @@ const artStyles: Record<string, CSSProperties> = {
     margin: 0,
   },
   support: {
-    fontSize: "30px", 
+    fontSize: "30px",
     fontWeight: 600,
     color: "rgba(0,0,0,0.6)",
     lineHeight: "1.3",
@@ -189,8 +188,8 @@ const artStyles: Record<string, CSSProperties> = {
   button: {
     backgroundColor: "#000",
     color: "#fff",
-    padding: "24px 40px", 
-    fontSize: "24px", 
+    padding: "24px 40px",
+    fontSize: "24px",
     fontWeight: 900,
     letterSpacing: "3px",
     textTransform: "uppercase",
@@ -199,13 +198,13 @@ const artStyles: Record<string, CSSProperties> = {
   },
   mockupWrapper: {
     position: "absolute",
-    right: "-120px", 
-    bottom: "-220px", 
+    right: "-80px",   // ← antes -120px
+    bottom: "-200px", // leve ajuste junto
     animation: "floatArtAnimation 6s ease-in-out infinite",
-    zIndex: 15, // Celular por cima da linha (10), mas embaixo do texto (20)
+    zIndex: 15,
   },
   mockup: {
-    height: "1150px", 
+    height: "1000px", // ↓ antes 1150px
     transform: "rotate(-4deg)",
   },
   mockupShadow: {
@@ -223,12 +222,12 @@ const artStyles: Record<string, CSSProperties> = {
     display: "flex",
     justifyContent: "space-between",
     padding: "40px 80px",
-    fontSize: "22px", 
+    fontSize: "22px",
     fontWeight: 800,
     letterSpacing: "4px",
     color: "rgba(0,0,0,0.35)",
     borderTop: "2px solid rgba(0,0,0,0.05)",
     position: "relative",
-    zIndex: 20, // Garante que o footer não seja engolido pela sombra
+    zIndex: 20,
   }
 };
