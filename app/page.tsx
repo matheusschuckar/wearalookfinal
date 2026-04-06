@@ -123,7 +123,7 @@ export default function OpenAppPage() {
 
               <p style={styles.subtitle}>
                 A Look conecta você às melhores marcas e entrega em minutos.
-                Sem espera, sem fricção.
+                Sem espera.
               </p>
             </div>
 
