@@ -24,7 +24,7 @@ export default function IGArtGeneratorPage() {
       <main style={pageStyles.wrapper}>
         <div style={pageStyles.controls}>
           <h2 style={{ fontSize: "12px", fontVariantCaps: "all-small-caps", fontWeight: "bold", letterSpacing: "1px" }}>
-            Look Editorial Art Generator
+            Look Editorial Art Generator // Mobile Optimized
           </h2>
         </div>
 
@@ -56,12 +56,12 @@ export default function IGArtGeneratorPage() {
                 </p>
 
                 <p style={artStyles.support}>
-                  ENCONTRE, ESCOLHA E RECEBA EM MINUTOS.
+                  ENCONTRE, ESCOLHA E<br/> RECEBA EM MINUTOS.
                 </p>
               </div>
 
               <div style={artStyles.button}>
-                BAIXAR O APP
+                ATUALIZE O APP
               </div>
 
             </div>
@@ -80,7 +80,7 @@ export default function IGArtGeneratorPage() {
 
           <footer style={artStyles.artFooter}>
             <span>WEARALOOK.COM</span>
-          
+            <span>© 2026 // SÃO PAULO, BR</span>
           </footer>
 
         </div>
@@ -121,112 +121,114 @@ const artStyles: Record<string, CSSProperties> = {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   },
   heroTextSection: {
-    padding: "100px 90px 40px 90px",
+    padding: "90px 80px 40px 80px",
     position: "relative",
-    zIndex: 20, // 🔥 Garante que o Título fique por cima de TUDO
+    zIndex: 20, // Título fica em cima de tudo
   },
   heroTitle: {
-    fontSize: "120px",
+    fontSize: "145px", 
     fontWeight: 900,
-    letterSpacing: "-7px",
-    lineHeight: "0.88",
+    letterSpacing: "-8px", 
+    lineHeight: "0.85", 
     color: "#000",
     textTransform: "uppercase",
     margin: 0,
   },
   divider: {
-    height: "2px",
+    height: "2px", 
     backgroundColor: "#000",
-    margin: "0 90px",
+    margin: "0 80px",
     position: "relative",
-    zIndex: 10, // 🔥 A linha fica por baixo do celular (que tem zIndex 15)
+    zIndex: 10, // A linha fica por baixo do celular (que tem zIndex 15)
   },
   dossierSection: {
     flex: 1,
     position: "relative",
-    padding: "60px 90px",
+    padding: "60px 80px",
     display: "flex",
   },
   textDossier: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    maxWidth: "520px",
-    gap: "40px",
+    maxWidth: "580px", 
+    gap: "50px",
     position: "relative",
-    zIndex: 20, // 🔥 Os textos também ficam por cima do celular
+    zIndex: 20, // O texto de apoio e o botão ficam por cima do celular
   },
   dossierHeader: {
     display: "flex",
     alignItems: "center",
-    gap: "16px",
+    gap: "24px",
   },
   logo: {
-    fontSize: "40px",
+    fontSize: "48px", 
     fontWeight: 900,
     letterSpacing: "-2px",
   },
   block: {
     display: "flex",
     flexDirection: "column",
-    gap: "20px",
+    gap: "24px",
   },
   subtitle: {
-    fontSize: "40px",
-    fontWeight: 700,
+    fontSize: "48px", 
+    fontWeight: 800,
     color: "#000",
-    lineHeight: "1.15",
+    lineHeight: "1.1",
+    letterSpacing: "-1px",
     margin: 0,
   },
   support: {
-    fontSize: "22px",
-    fontWeight: 500,
-    color: "rgba(0,0,0,0.7)",
-    lineHeight: "1.4",
+    fontSize: "30px", 
+    fontWeight: 600,
+    color: "rgba(0,0,0,0.6)",
+    lineHeight: "1.3",
     margin: 0,
   },
   button: {
     backgroundColor: "#000",
     color: "#fff",
-    padding: "20px 32px",
-    fontSize: "14px",
-    fontWeight: 800,
-    letterSpacing: "2px",
+    padding: "24px 40px", 
+    fontSize: "24px", 
+    fontWeight: 900,
+    letterSpacing: "3px",
     textTransform: "uppercase",
     width: "fit-content",
+    marginTop: "10px",
   },
   mockupWrapper: {
     position: "absolute",
-    right: "-100px",
-    bottom: "-180px",
+    right: "-120px", 
+    bottom: "-220px", 
     animation: "floatArtAnimation 6s ease-in-out infinite",
-    zIndex: 15, // 🔥 O Sanduíche: Celular (15) esmaga a Linha (10) mas é esmagado pelo Texto (20)
+    zIndex: 15, // Celular por cima da linha (10), mas embaixo do texto (20)
   },
   mockup: {
-    height: "1100px",
+    height: "1150px", 
     transform: "rotate(-4deg)",
   },
   mockupShadow: {
     position: "absolute",
-    bottom: "200px",
+    bottom: "220px",
     left: "150px",
     width: "350px",
-    height: "40px",
-    backgroundColor: "rgba(0,0,0,0.25)",
-    filter: "blur(30px)",
+    height: "50px",
+    backgroundColor: "rgba(0,0,0,0.3)",
+    filter: "blur(40px)",
     transform: "rotate(-4deg)",
     zIndex: -1,
   },
   artFooter: {
     display: "flex",
     justifyContent: "space-between",
-    padding: "40px 90px",
-    fontSize: "16px",
-    fontWeight: 700,
-    letterSpacing: "3px",
+    padding: "40px 80px",
+    fontSize: "22px", 
+    fontWeight: 800,
+    letterSpacing: "4px",
     color: "rgba(0,0,0,0.35)",
-    borderTop: "1px solid rgba(0,0,0,0.05)",
+    borderTop: "2px solid rgba(0,0,0,0.05)",
     position: "relative",
-    zIndex: 20, // 🔥 Garante que o Footer não seja coberto pela sombra do celular
+    zIndex: 20, // Garante que o footer não seja engolido pela sombra
   }
 };
