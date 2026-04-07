@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabaseClient";
 type AirtableRecord = {
   id: string;
   createdTime: string;
+  isSupabase?: boolean; // 🔥 Flag invisível para sabermos de onde veio
   fields: {
     ["Name"]?: string;
     ["Order ID"]?: string;
@@ -16,7 +17,7 @@ type AirtableRecord = {
     ["Store Name"]?: string;
     ["Item Price"]?: number | string;
     ["Notes"]?: string;
-    ["CPF"]?: string; // adicionado CPF
+    ["CPF"]?: string;
   };
 };
 
@@ -45,13 +46,12 @@ export default function PartnerOrdersPage() {
   const audioUnlockedRef = useRef<boolean>(false);
 
   // =============== ÁUDIO ===============
-  // devolve SEMPRE um AudioContext e tenta dar resume se estiver suspenso
   const getAudioCtx = useCallback(async (): Promise<AudioContext | null> => {
     try {
       if (!audioCtxRef.current) {
         const AC =
-          window.AudioContext || // <-- Use o 'window' global aqui
-          (window as WebkitWindow).webkitAudioContext; // <-- Use o cast só aqui
+          window.AudioContext ||
+          (window as WebkitWindow).webkitAudioContext;
         if (!AC) return null;
         audioCtxRef.current = new AC();
       }
@@ -70,7 +70,6 @@ export default function PartnerOrdersPage() {
   };
 
   const ensureAudioContextUnlocked = useCallback(() => {
-    // chamado pelo clique do user
     getAudioCtx().then((ctx) => {
       if (ctx && ctx.state === "running") {
         markAudioUnlocked();
@@ -79,10 +78,8 @@ export default function PartnerOrdersPage() {
   }, [getAudioCtx]);
 
   const playBeep = useCallback(async () => {
-    // tenta pegar ctx sempre que for tocar
     const ctx = await getAudioCtx();
 
-    // se ainda assim o Safari não liberou, cai no fallback
     if (!ctx || ctx.state !== "running") {
       try {
         const audio = new Audio(
@@ -103,7 +100,7 @@ export default function PartnerOrdersPage() {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
-      osc.type = "square"; // mais alto
+      osc.type = "square";
       osc.frequency.setValueAtTime(920, now);
 
       gain.gain.setValueAtTime(0.0, now);
@@ -116,7 +113,6 @@ export default function PartnerOrdersPage() {
       osc.start(now);
       osc.stop(now + duration);
     } catch {
-      // fallback final
       try {
         const audio = new Audio(
           "data:audio/wav;base64,UklGRhQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQgAAAAA/////w=="
@@ -129,7 +125,6 @@ export default function PartnerOrdersPage() {
     }
   }, [getAudioCtx]);
 
-  // desbloquear no 1º gesto
   useEffect(() => {
     const unlock = () => {
       ensureAudioContextUnlocked();
@@ -164,9 +159,7 @@ export default function PartnerOrdersPage() {
 
         const { data: allowed, error: allowErr } = await supabase.rpc(
           "partner_email_allowed",
-          {
-            p_email: email,
-          }
+          { p_email: email }
         );
         if (allowErr) throw allowErr;
         if (!allowed) {
@@ -193,14 +186,12 @@ export default function PartnerOrdersPage() {
     })();
   }, [router]);
 
-  // =============== AIRTABLE ===============
-  // escapador simples para evitar quebra quando storeName tem apóstrofo
+  // =============== AIRTABLE FETCH ===============
   function escapeAirtableString(input: string) {
     return input.replace(/'/g, "''");
   }
 
-  // Retorna null quando ocorrer erro (assim o caller não sobrescreve orders)
-  async function fetchOrdersForStore(store: string): Promise<AirtableRecord[] | null> {
+  async function fetchOrdersForStoreAirtable(store: string): Promise<AirtableRecord[] | null> {
     const API_KEY = process.env.NEXT_PUBLIC_AIRTABLE_API_KEY;
     const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID;
     const TABLE = process.env.NEXT_PUBLIC_AIRTABLE_TABLE_NAME || "Orders";
@@ -224,11 +215,9 @@ export default function PartnerOrdersPage() {
         });
         if (!res.ok) {
           console.error("[/parceiros/pedidos] airtable error:", await res.text());
-          // em caso de erro, retornamos null para o caller evitar limpar a UI
           return null;
         }
-        const json: { records?: AirtableRecord[]; offset?: string } =
-          await res.json();
+        const json: { records?: AirtableRecord[]; offset?: string } = await res.json();
         all.push(...(json.records ?? []));
         offset = json.offset;
       } while (offset);
@@ -240,6 +229,80 @@ export default function PartnerOrdersPage() {
     return all;
   }
 
+  // =============== SUPABASE FETCH ===============
+  async function fetchOrdersForStoreSupabase(store: string): Promise<AirtableRecord[] | null> {
+    try {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("store_name", store)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Disfarça o objeto do Supabase como se fosse do Airtable para a UI não quebrar
+      const mapped: AirtableRecord[] = (data || []).map((row) => ({
+        id: row.id,
+        createdTime: row.created_at,
+        isSupabase: true, // 🔥 Nossa flag mágica
+        fields: {
+          "Name": row.name || row.user_email,
+          "Order ID": row.order_id,
+          "Created At": row.created_at,
+          "Status": row.status,
+          "Store Name": row.store_name,
+          "Item Price": row.item_price,
+          "Notes": row.notes,
+          "CPF": row.cpf,
+        },
+      }));
+
+      return mapped;
+    } catch (err) {
+      console.error("[/parceiros/pedidos] supabase fetch failed:", err);
+      return null;
+    }
+  }
+
+  // =============== DUAL-READ MERGE ===============
+  async function fetchMergedOrders(store: string): Promise<AirtableRecord[] | null> {
+    const [airtableData, supabaseData] = await Promise.all([
+      fetchOrdersForStoreAirtable(store),
+      fetchOrdersForStoreSupabase(store),
+    ]);
+
+    if (airtableData === null && supabaseData === null) return null;
+
+    const airtable = airtableData || [];
+    const supa = supabaseData || [];
+
+    // Estratégia de esmagamento baseada no Order ID
+    const orderMap = new Map<string, AirtableRecord>();
+
+    // 1. Coloca os do Airtable primeiro
+    for (const a of airtable) {
+      const oid = a.fields["Order ID"] || a.id;
+      orderMap.set(oid, a);
+    }
+
+    // 2. Coloca os do Supabase (Se o ID for igual, ele esmaga o do Airtable)
+    for (const s of supa) {
+      const oid = s.fields["Order ID"] || s.id;
+      orderMap.set(oid, s);
+    }
+
+    const combined = Array.from(orderMap.values());
+
+    // Ordena do mais recente pro mais antigo
+    combined.sort((a, b) => {
+      const dateA = new Date(a.fields["Created At"] || a.createdTime).getTime();
+      const dateB = new Date(b.fields["Created At"] || b.createdTime).getTime();
+      return dateB - dateA;
+    });
+
+    return combined;
+  }
+
   // =============== LOOP 15s ===============
   useEffect(() => {
     if (!storeName) return;
@@ -247,16 +310,14 @@ export default function PartnerOrdersPage() {
     let cancelled = false;
 
     const load = async () => {
-      const data = await fetchOrdersForStore(storeName);
+      const data = await fetchMergedOrders(storeName); // 🔥 Usa a nossa função hibrida
       if (cancelled) return;
 
-      // se houve erro no fetch, não sobrescreve os pedidos atuais (evita sumir tudo)
       if (data === null) {
         setNotice("Falha ao atualizar pedidos. Verifique a conexão.");
         return;
       }
 
-      // pedido novo
       const newest = data[0];
       if (newest && newestOrderIdRef.current) {
         if (newest.id !== newestOrderIdRef.current) {
@@ -267,7 +328,6 @@ export default function PartnerOrdersPage() {
         newestOrderIdRef.current = newest.id;
       }
 
-      // mudança para Pago
       const prevMap = prevStatusesRef.current;
       let shouldBeepForPaid = false;
 
@@ -283,7 +343,6 @@ export default function PartnerOrdersPage() {
         await playBeep();
       }
 
-      // salvar mapa
       const nextMap: Record<string, string> = {};
       for (const rec of data) {
         nextMap[rec.id] = rec.fields["Status"] || "";
@@ -303,8 +362,22 @@ export default function PartnerOrdersPage() {
     };
   }, [storeName, playBeep]);
 
-  // =============== UPDATE AIRTABLE (Pago → Enviado) ===============
-  async function updateAirtableStatus(recordId: string, newStatus: "Enviado") {
+  // =============== UPDATE SUPABASE ===============
+  async function updateSupabaseStatus(recordId: string, newStatus: string) {
+    const { error } = await supabase
+      .from("orders")
+      .update({ status: newStatus })
+      .eq("id", recordId);
+
+    if (error) {
+      console.error("Falha ao atualizar Supabase:", error);
+      return false;
+    }
+    return true;
+  }
+
+  // =============== UPDATE AIRTABLE ===============
+  async function updateAirtableStatus(recordId: string, newStatus: string) {
     const API_KEY = process.env.NEXT_PUBLIC_AIRTABLE_API_KEY;
     const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID;
     const TABLE = process.env.NEXT_PUBLIC_AIRTABLE_TABLE_NAME || "Orders";
@@ -323,20 +396,19 @@ export default function PartnerOrdersPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          fields: {
-            Status: newStatus,
-          },
+          fields: { Status: newStatus },
         }),
       }
     );
 
     if (!res.ok) {
-      console.error("Falha ao atualizar status no Airtable:", await res.text());
+      console.error("Falha ao atualizar Airtable:", await res.text());
       return false;
     }
     return true;
   }
 
+  // =============== HANDLE CLICK ===============
   async function handleStatusClick(rec: AirtableRecord) {
     const current = rec.fields["Status"] || "";
     if (current !== "Pago") return;
@@ -344,7 +416,7 @@ export default function PartnerOrdersPage() {
     const confirmado = window.confirm("O pedido realmente foi enviado?");
     if (!confirmado) return;
 
-    // otimista
+    // Atualização otimista na tela
     setOrders((prev) =>
       prev.map((o) =>
         o.id === rec.id
@@ -359,23 +431,24 @@ export default function PartnerOrdersPage() {
       )
     );
 
-    const ok = await updateAirtableStatus(rec.id, "Enviado");
+    // 🔥 Desvio inteligente: Atualiza onde estiver armazenado
+    const ok = rec.isSupabase 
+      ? await updateSupabaseStatus(rec.id, "Enviado")
+      : await updateAirtableStatus(rec.id, "Enviado");
+
     if (!ok) {
-      // volta
+      // Volta ao estado anterior se falhar
       setOrders((prev) =>
         prev.map((o) =>
           o.id === rec.id
             ? {
                 ...o,
-                fields: {
-                  ...o.fields,
-                  Status: current,
-                },
+                fields: { ...o.fields, Status: current },
               }
             : o
         )
       );
-      setNotice("Não foi possível alterar o status no Airtable.");
+      setNotice(`Não foi possível alterar o status no ${rec.isSupabase ? 'Supabase' : 'Airtable'}.`);
     } else {
       setNotice(null);
     }
@@ -497,7 +570,7 @@ export default function PartnerOrdersPage() {
                   <th className="py-3 px-3 whitespace-nowrap">Criado em</th>
                   <th className="py-3 px-3 whitespace-nowrap">Status</th>
                   <th className="py-3 px-3 whitespace-nowrap">Loja</th>
-                  <th className="py-3 px-3 whitespace-nowrap">CPF</th> {/* coluna CPF */}
+                  <th className="py-3 px-3 whitespace-nowrap">CPF</th>
                   <th className="py-3 px-3 whitespace-nowrap text-right">
                     Preço
                   </th>
@@ -581,7 +654,7 @@ export default function PartnerOrdersPage() {
                         </td>
 
                         <td className="py-4 px-3 text-sm text-neutral-700 whitespace-nowrap">
-                          {f["CPF"] || "—"} {/* exibe CPF */}
+                          {f["CPF"] || "—"}
                         </td>
 
                         <td className="py-4 px-3 text-sm text-neutral-900 whitespace-nowrap text-right">
