@@ -49,6 +49,7 @@ export default function LookPartnersSlide1() {
               </div>
             </div>
 
+            {/* Mockup posicionado acima da linha do rodapé */}
             <div style={artStyles.mockupWrapper}>
               <img src={mockupUrl} alt="Look Partners App" style={artStyles.mockup} />
               <div style={artStyles.mockupShadow} />
@@ -57,15 +58,13 @@ export default function LookPartnersSlide1() {
 
           <footer style={artStyles.artFooter}>
             <span>WEARALOOK.COM/PARTNERS</span>
-            <span>01/05</span>
+            {/* Numeração 01/05 removida */}
           </footer>
         </div>
       </main>
     </>
   );
 }
-
-// Estilos compartilhados no final da resposta
 
 const pageStyles: Record<string, CSSProperties> = {
   wrapper: {
@@ -157,24 +156,12 @@ const artStyles: Record<string, CSSProperties> = {
     lineHeight: "1.3",
     margin: 0,
   },
-  button: {
-    backgroundColor: "#000",
-    color: "#fff",
-    padding: "24px 40px",
-    fontSize: "24px",
-    fontWeight: 900,
-    letterSpacing: "3px",
-    textTransform: "uppercase",
-    width: "fit-content",
-    marginTop: "10px",
-    cursor: "pointer",
-  },
   mockupWrapper: {
     position: "absolute",
     right: "-80px",
     bottom: "-200px",
     animation: "floatArtAnimation 6s ease-in-out infinite",
-    zIndex: 15,
+    zIndex: 30, // Aumentado para garantir que fique à frente da linha do footer
   },
   mockup: {
     height: "1000px",
@@ -193,7 +180,7 @@ const artStyles: Record<string, CSSProperties> = {
   },
   artFooter: {
     display: "flex",
-    justifyContent: "space-between",
+    justifyContent: "center", // Centralizado sem a numeração
     padding: "40px 80px",
     fontSize: "22px",
     fontWeight: 800,
@@ -201,6 +188,6 @@ const artStyles: Record<string, CSSProperties> = {
     color: "rgba(0,0,0,0.35)",
     borderTop: "2px solid rgba(0,0,0,0.05)",
     position: "relative",
-    zIndex: 20,
+    zIndex: 20, // Mantido abaixo do zIndex do mockupWrapper
   }
 };
