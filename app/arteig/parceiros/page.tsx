@@ -57,7 +57,6 @@ export default function LookPartnersSlide2() {
 
           <footer style={artStyles.artFooter}>
             <span>WEARALOOK.COM/PARTNERS</span>
-            <span>02/05</span>
           </footer>
         </div>
       </main>
