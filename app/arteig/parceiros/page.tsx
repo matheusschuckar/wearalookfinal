@@ -3,22 +3,29 @@
 import React, { CSSProperties } from "react";
 import Head from "next/head";
 
-export default function LookPartnersSlide1() {
-  const mockupUrl = "https://kuaoqzxqraeioqyhmnkw.supabase.co/storage/v1/object/public/store_images/Gray%20and%20Black%20Modern%20Handphone%20Mockup%20Instagram%20Story-2.png";
+export default function LookPartnersSlide2() {
+  const mockupUrl = "https://kuaoqzxqraeioqyhmnkw.supabase.co/storage/v1/object/public/store_images/Gray%20and%20Black%20Modern%20Handphone%20Mockup%20Instagram%20Story-3.png";
 
   return (
     <>
       <Head>
-        <title>Look Partners // BEHIND THE SCENES</title>
+        <title>Look Partners // ASSET CONTROL</title>
       </Head>
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes floatArtAnimation {
+          0% { transform: translateY(0px) rotate(-4deg); }
+          50% { transform: translateY(-18px) rotate(-4deg); }
+          100% { transform: translateY(0px) rotate(-4deg); }
+        }
+      `}} />
 
       <main style={pageStyles.wrapper}>
-        <div id="look-art-canvas-1" style={artStyles.canvas}>
+        <div id="look-art-canvas-2" style={artStyles.canvas}>
           <section style={artStyles.heroTextSection}>
             <h1 style={artStyles.heroTitle}>
-              BEHIND<br />
-              THE<br />
-              SCENES.
+              TOTAL<br />
+              ASSET<br />
+              CONTROL.
             </h1>
           </section>
 
@@ -27,30 +34,30 @@ export default function LookPartnersSlide1() {
           <section style={artStyles.dossierSection}>
             <div style={artStyles.textDossier}>
               <header style={artStyles.dossierHeader}>
-                <span style={artStyles.logo}>LOOK PARTNERS</span>
+                <span style={artStyles.logo}>CATÁLOGO</span>
               </header>
 
               <div style={artStyles.block}>
                 <p style={artStyles.subtitle}>
-                  O NOVO APP.<br />
-                  O BASTIDOR<br />
-                  DA SUA MARCA.
+                  GESTÃO DE<br />
+                  ACERVO EM<br />
+                  TEMPO REAL.
                 </p>
                 <p style={artStyles.support}>
-                  CONTROLE ABSOLUTO PARA<br/>CURADORIAS IMPECÁVEIS.
+                  ADICIONE E EDITE SUAS<br/>PEÇAS COM PRECISÃO.
                 </p>
               </div>
             </div>
 
-            {/* Mockup posicionado acima da linha do rodapé e sem animação */}
             <div style={artStyles.mockupWrapper}>
-              <img src={mockupUrl} alt="Look Partners App" style={artStyles.mockup} />
+              <img src={mockupUrl} alt="Adicionar Produto" style={artStyles.mockup} />
               <div style={artStyles.mockupShadow} />
             </div>
           </section>
 
           <footer style={artStyles.artFooter}>
             <span>WEARALOOK.COM/PARTNERS</span>
+            <span>02/05</span>
           </footer>
         </div>
       </main>
