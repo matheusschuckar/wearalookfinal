@@ -3,49 +3,42 @@
 import React, { CSSProperties } from "react";
 import Head from "next/head";
 
-export default function LookPartnersSlide4() {
-  const mockupUrl = "https://kuaoqzxqraeioqyhmnkw.supabase.co/storage/v1/object/public/store_images/Gray%20and%20Black%20Modern%20Handphone%20Mockup%20Instagram%20Story-4.png";
-
+export default function LookPartnersSlide5() {
   return (
     <>
       <Head>
-        <title>Look Partners // TAILORED ACCESS</title>
+        <title>Look Partners // ELEVATE</title>
       </Head>
 
       <main style={pageStyles.wrapper}>
-        <div id="look-art-canvas-4" style={artStyles.canvas}>
-          <section style={artStyles.heroTextSection}>
-            <h1 style={artStyles.heroTitle}>
-              TAILORED<br />
-              CLIENT<br />
-              ACCESS.
+        <div id="look-art-canvas-5" style={artStyles.canvas}>
+          
+          <section style={{...artStyles.heroTextSection, paddingBottom: "0"}}>
+            <h1 style={{...artStyles.heroTitle, fontSize: "125px", textAlign: "center"}}>
+              ELEVATE<br />
+              YOUR<br />
+              CURATION.
             </h1>
           </section>
 
-          <div style={artStyles.divider} />
+          <div style={{...artStyles.divider, margin: "60px 80px"}} />
 
-          <section style={artStyles.dossierSection}>
-            <div style={artStyles.textDossier}>
-              <header style={artStyles.dossierHeader}>
-                <span style={artStyles.logo}>ESTRATÉGIA</span>
-              </header>
+          <section style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 80px", textAlign: "center" }}>
+            
+            <span style={artStyles.logo}>LOOK PARTNERS</span>
+            
+            <p style={{...artStyles.subtitle, marginTop: "40px", marginBottom: "20px"}}>
+              MUITO MAIS AGUARDA<br />NOS BASTIDORES.
+            </p>
+            
+            <p style={{...artStyles.support, maxWidth: "700px", marginBottom: "60px"}}>
+              ELEVE O PADRÃO DA SUA OPERAÇÃO. ENTRE EM CONTATO E TRAGA SUA MARCA PARA O ECOSSISTEMA LOOK.
+            </p>
 
-              <div style={artStyles.block}>
-                <p style={artStyles.subtitle}>
-                  CRIE CONVITES.<br />
-                  CONTROLE SEUS<br />
-                  BENEFÍCIOS.
-                </p>
-                <p style={artStyles.support}>
-                  CUPONS EXCLUSIVOS PARA<br/>CLIENTES SELECIONADOS.
-                </p>
-              </div>
+            <div style={artStyles.button}>
+              APPLY NOW
             </div>
 
-            <div style={artStyles.mockupWrapper}>
-              <img src={mockupUrl} alt="Criar Cupons" style={artStyles.mockup} />
-              <div style={artStyles.mockupShadow} />
-            </div>
           </section>
 
           <footer style={artStyles.artFooter}>
@@ -147,30 +140,21 @@ const artStyles: Record<string, CSSProperties> = {
     lineHeight: "1.3",
     margin: 0,
   },
-  mockupWrapper: {
-    position: "absolute",
-    right: "-80px",
-    bottom: "-200px",
-    zIndex: 30, // Mockup na frente da linha do footer
-  },
-  mockup: {
-    height: "1000px",
-    transform: "rotate(-4deg)",
-  },
-  mockupShadow: {
-    position: "absolute",
-    bottom: "220px",
-    left: "150px",
-    width: "350px",
-    height: "50px",
-    backgroundColor: "rgba(0,0,0,0.3)",
-    filter: "blur(40px)",
-    transform: "rotate(-4deg)",
-    zIndex: -1,
+  button: {
+    backgroundColor: "#000",
+    color: "#fff",
+    padding: "24px 40px",
+    fontSize: "24px",
+    fontWeight: 900,
+    letterSpacing: "3px",
+    textTransform: "uppercase",
+    width: "fit-content",
+    marginTop: "10px",
+    cursor: "pointer",
   },
   artFooter: {
     display: "flex",
-    justifyContent: "flex-start", // Alinhado à esquerda
+    justifyContent: "flex-start",
     padding: "40px 80px",
     fontSize: "22px",
     fontWeight: 800,
@@ -178,6 +162,6 @@ const artStyles: Record<string, CSSProperties> = {
     color: "rgba(0,0,0,0.35)",
     borderTop: "2px solid rgba(0,0,0,0.05)",
     position: "relative",
-    zIndex: 10, // Linha atrás do mockup
+    zIndex: 10,
   }
 };
