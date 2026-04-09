@@ -37,7 +37,7 @@ export default function LookPartnersSlide4() {
                   BENEFÍCIOS.
                 </p>
                 <p style={artStyles.support}>
-                  CUPONS EXCLUSIVOS PARA<br/>SUA CLIENTELA SELECIONADA.
+                  CUPONS EXCLUSIVOS PARA<br/>CLIENTES SELECIONADOS.
                 </p>
               </div>
             </div>
