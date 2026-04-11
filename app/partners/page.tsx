@@ -6,7 +6,7 @@ import Head from "next/head";
 export default function OpenPartnersAppPage() {
   // ATENÇÃO: Substitua pelo link correto do App LookPartners na App Store
   const appStoreUrl =
-    "https://apps.apple.com/br/app/look-partners/idXXXXXXXXX";
+    "https://apps.apple.com/br/app/lookpartners/id6761892193";
 
   // Mockup 1 (Abertura/Dashboard)
   const iPhoneMockupUrl =
