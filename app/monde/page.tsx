@@ -277,21 +277,21 @@ const ProjectBlock = ({
         index % 2 === 0 ? "lg:flex-row" : "lg:flex-row-reverse"
       } gap-0 w-full bg-[#050505] border border-[#1A1A1A] rounded-sm overflow-hidden hover:border-[#333333] transition-colors duration-700`}
     >
-      {/* Imagem Container - Tratamento Condicional para Layout Single/Split */}
+      {/* Imagem Container - Ajustado para empilhar no mobile no modo split */}
       <div
         className={`w-full lg:w-1/2 min-h-[400px] lg:min-h-[600px] flex ${
-          project.layout === "split" ? "flex-row" : ""
+          project.layout === "split" ? "flex-col lg:flex-row" : "flex-row"
         }`}
       >
         {project.layout === "single" ? (
           <div className="relative w-full h-full overflow-hidden bg-[#0A0A0A] border-b lg:border-b-0 lg:border-r border-[#1A1A1A]">
-            <div className="absolute inset-0 bg-[radial-gradient(#1A1A1A_1px,transparent_1px)] [background-size:16px_16px] opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-            <motion.div className="absolute inset-0 flex items-center justify-center text-[#666666] group-hover:scale-[1.02] transition-transform duration-1000 ease-out">
+            <div className="absolute inset-0 bg-[radial-gradient(#1A1A1A_1px,transparent_1px)] [background-size:16px_16px] opacity-30 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-1000" />
+            <motion.div className="absolute inset-0 flex items-center justify-center text-[#666666] lg:group-hover:scale-[1.02] transition-transform duration-1000 ease-out">
               <div className="flex flex-col items-center gap-3">
-                <span className="font-mono text-[10px] tracking-[0.3em] uppercase border border-[#1A1A1A] px-6 py-3 rounded-sm bg-[#050505] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+                <span className="font-mono text-[11px] lg:text-[10px] tracking-[0.3em] uppercase border border-[#1A1A1A] px-6 py-3 rounded-sm bg-[#050505] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
                   Asset Required
                 </span>
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-700 flex gap-4 text-[9px] font-mono uppercase tracking-widest text-[#666666] mt-2">
+                <div className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-700 flex gap-4 text-[10px] lg:text-[9px] font-mono uppercase tracking-widest text-[#666666] mt-2">
                   <span>W: 1920PX</span>
                   <span>/</span>
                   <span>H: 1080PX</span>
@@ -300,29 +300,29 @@ const ProjectBlock = ({
             </motion.div>
           </div>
         ) : (
-          // Layout Split: Duas colunas para acomodar Consumer e Portal
+          // Layout Split: Duas linhas no mobile, Duas colunas no desktop
           <>
-            <div className="relative w-1/2 h-full overflow-hidden bg-[#0A0A0A] border-r border-b lg:border-b-0 border-[#1A1A1A]">
-              <div className="absolute inset-0 bg-[radial-gradient(#1A1A1A_1px,transparent_1px)] [background-size:16px_16px] opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-              <motion.div className="absolute inset-0 flex items-center justify-center text-[#666666] group-hover:scale-[1.02] transition-transform duration-1000 ease-out">
+            <div className="relative w-full h-1/2 lg:w-1/2 lg:h-full overflow-hidden bg-[#0A0A0A] border-b lg:border-b-0 lg:border-r border-[#1A1A1A]">
+              <div className="absolute inset-0 bg-[radial-gradient(#1A1A1A_1px,transparent_1px)] [background-size:16px_16px] opacity-30 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-1000" />
+              <motion.div className="absolute inset-0 flex items-center justify-center text-[#666666] lg:group-hover:scale-[1.02] transition-transform duration-1000 ease-out">
                 <div className="flex flex-col items-center gap-3">
-                  <span className="font-mono text-[9px] tracking-[0.2em] uppercase text-[#666666] mb-2">
+                  <span className="font-mono text-[10px] lg:text-[9px] tracking-[0.2em] uppercase text-[#666666] mb-2">
                     Consumer
                   </span>
-                  <span className="font-mono text-[10px] tracking-[0.3em] uppercase border border-[#1A1A1A] px-4 py-2 rounded-sm bg-[#050505] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+                  <span className="font-mono text-[11px] lg:text-[10px] tracking-[0.3em] uppercase border border-[#1A1A1A] px-4 py-2 rounded-sm bg-[#050505] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
                     Asset
                   </span>
                 </div>
               </motion.div>
             </div>
-            <div className="relative w-1/2 h-full overflow-hidden bg-[#0A0A0A] border-b lg:border-b-0 lg:border-r border-[#1A1A1A]">
-              <div className="absolute inset-0 bg-[radial-gradient(#1A1A1A_1px,transparent_1px)] [background-size:16px_16px] opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-              <motion.div className="absolute inset-0 flex items-center justify-center text-[#666666] group-hover:scale-[1.02] transition-transform duration-1000 ease-out">
+            <div className="relative w-full h-1/2 lg:w-1/2 lg:h-full overflow-hidden bg-[#0A0A0A] border-b lg:border-b-0 lg:border-r border-[#1A1A1A]">
+              <div className="absolute inset-0 bg-[radial-gradient(#1A1A1A_1px,transparent_1px)] [background-size:16px_16px] opacity-30 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-1000" />
+              <motion.div className="absolute inset-0 flex items-center justify-center text-[#666666] lg:group-hover:scale-[1.02] transition-transform duration-1000 ease-out">
                 <div className="flex flex-col items-center gap-3">
-                  <span className="font-mono text-[9px] tracking-[0.2em] uppercase text-[#666666] mb-2">
+                  <span className="font-mono text-[10px] lg:text-[9px] tracking-[0.2em] uppercase text-[#666666] mb-2">
                     Portal
                   </span>
-                  <span className="font-mono text-[10px] tracking-[0.3em] uppercase border border-[#1A1A1A] px-4 py-2 rounded-sm bg-[#050505] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+                  <span className="font-mono text-[11px] lg:text-[10px] tracking-[0.3em] uppercase border border-[#1A1A1A] px-4 py-2 rounded-sm bg-[#050505] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
                     Asset
                   </span>
                 </div>
@@ -332,14 +332,14 @@ const ProjectBlock = ({
         )}
       </div>
 
-      {/* Info Container - Alto Contraste e Linhas Arquitetônicas */}
+      {/* Info Container */}
       <div className="w-full lg:w-1/2 p-10 md:p-16 flex flex-col justify-center bg-[#050505] relative">
         <div className="flex items-center gap-4 mb-10">
-          <span className="text-[10px] font-mono text-[#EAEAEA] border border-[#333333] px-3 py-1 rounded-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+          <span className="text-[11px] lg:text-[10px] font-mono text-[#EAEAEA] border border-[#333333] px-3 py-1 rounded-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
             {String(index + 1).padStart(2, "0")}
           </span>
           <div className="h-px w-8 bg-[#1A1A1A]" />
-          <span className="text-[10px] font-medium uppercase tracking-[0.3em] text-[#888888]">
+          <span className="text-[11px] lg:text-[10px] font-medium uppercase tracking-[0.3em] text-[#888888]">
             {project.category}
           </span>
         </div>
@@ -354,7 +354,7 @@ const ProjectBlock = ({
 
         <div className="grid grid-cols-2 gap-8 border-t border-[#1A1A1A] pt-8 mt-auto">
           <div>
-            <h4 className="text-[9px] font-medium uppercase tracking-[0.3em] text-[#666666] mb-4">
+            <h4 className="text-[11px] lg:text-[9px] font-medium uppercase tracking-[0.3em] text-[#666666] mb-4">
               {t.featTitle}
             </h4>
             <ul className="space-y-2">
@@ -369,7 +369,7 @@ const ProjectBlock = ({
             </ul>
           </div>
           <div>
-            <h4 className="text-[9px] font-medium uppercase tracking-[0.3em] text-[#666666] mb-4">
+            <h4 className="text-[11px] lg:text-[9px] font-medium uppercase tracking-[0.3em] text-[#666666] mb-4">
               {t.builtTitle}
             </h4>
             <ul className="space-y-2">
@@ -405,9 +405,9 @@ export default function PortfolioPremium() {
 
   return (
     <main className="bg-[#030303] text-[#EAEAEA] min-h-screen font-sans selection:bg-[#EAEAEA] selection:text-[#030303]">
-      {/* Ruído em alta densidade para textura premium */}
+      {/* Ruído otimizado via hardware para não impactar GPU de mobiles */}
       <div
-        className="fixed inset-0 opacity-[0.04] pointer-events-none z-50 mix-blend-screen"
+        className="fixed inset-0 opacity-[0.04] pointer-events-none z-50 mix-blend-screen transform-gpu"
         aria-hidden="true"
         style={{
           backgroundImage:
@@ -427,21 +427,25 @@ export default function PortfolioPremium() {
         }`}
       >
         <div className="max-w-[1400px] mx-auto px-6 md:px-12 flex justify-between items-center">
-          <span className="text-[10px] font-medium tracking-[0.4em] uppercase text-[#FFFFFF]">
+          <span className="text-[11px] lg:text-[10px] font-medium tracking-[0.4em] uppercase text-[#FFFFFF]">
             Monde Agency
           </span>
-          <div className="flex gap-4">
+          <div className="flex gap-2">
             {(["en", "pt"] as const).map((l) => (
               <button
                 key={l}
                 onClick={() => setLang(l)}
-                className={`text-[9px] font-medium uppercase tracking-[0.3em] transition-colors duration-300 ${
-                  lang === l
-                    ? "text-[#FFFFFF] border-b border-[#FFFFFF] pb-1"
-                    : "text-[#666666] hover:text-[#A0A0A0] pb-1"
-                }`}
+                className="p-2 -m-2 touch-manipulation" // Padding generoso invisível para touch target
               >
-                {l}
+                <span
+                  className={`text-[11px] lg:text-[9px] font-medium uppercase tracking-[0.3em] transition-colors duration-300 ${
+                    lang === l
+                      ? "text-[#FFFFFF] border-b border-[#FFFFFF] pb-1"
+                      : "text-[#666666] hover:text-[#A0A0A0] pb-1"
+                  }`}
+                >
+                  {l}
+                </span>
               </button>
             ))}
           </div>
@@ -457,7 +461,7 @@ export default function PortfolioPremium() {
           className="mb-10 flex items-center gap-4"
         >
           <div className="h-px w-12 bg-[#333333]" />
-          <span className="text-[10px] font-medium uppercase tracking-[0.3em] text-[#888888]">
+          <span className="text-[11px] lg:text-[10px] font-medium uppercase tracking-[0.3em] text-[#888888]">
             {t.hero.subtitle}
           </span>
         </motion.div>
@@ -491,16 +495,16 @@ export default function PortfolioPremium() {
             {t.hero.desc}
           </p>
 
-          <div className="flex gap-8 text-[10px] uppercase tracking-[0.3em] font-medium">
+          <div className="flex gap-8 text-[11px] lg:text-[10px] uppercase tracking-[0.3em] font-medium">
             <a
               href="#projects"
-              className="text-[#FFFFFF] hover:text-[#888888] transition-colors duration-300"
+              className="p-2 -m-2 text-[#FFFFFF] hover:text-[#888888] transition-colors duration-300 touch-manipulation"
             >
               {t.hero.btnProjects}
             </a>
             <a
               href="#contact"
-              className="text-[#FFFFFF] hover:text-[#888888] transition-colors duration-300"
+              className="p-2 -m-2 text-[#FFFFFF] hover:text-[#888888] transition-colors duration-300 touch-manipulation"
             >
               {t.hero.btnContact}
             </a>
@@ -512,25 +516,23 @@ export default function PortfolioPremium() {
       <section className="py-40 px-6 md:px-12 bg-[#050505] border-t border-[#1A1A1A]">
         <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16">
           <div className="lg:col-span-4 flex flex-col justify-between">
-            <h2 className="text-[10px] font-medium uppercase tracking-[0.3em] text-[#666666]">
+            <h2 className="text-[11px] lg:text-[10px] font-medium uppercase tracking-[0.3em] text-[#666666]">
               / {t.about.title}
             </h2>
           </div>
 
           <div className="lg:col-span-8">
             <div className="mb-16 max-w-3xl">
-              {/* O Título de Impacto (Separado) */}
               <h3 className="text-3xl md:text-4xl lg:text-5xl font-medium tracking-tighter text-[#FFFFFF] mb-8 leading-[1.1]">
                 {t.about.p1}
               </h3>
-              {/* O Parágrafo de Apoio (Separado e legível) */}
               <p className="text-base md:text-xl text-[#A0A0A0] font-light leading-relaxed">
                 {t.about.p2}
               </p>
             </div>
 
             <div className="border-t border-[#1A1A1A] pt-10">
-              <h4 className="text-[10px] font-medium uppercase tracking-[0.3em] text-[#666666] mb-8">
+              <h4 className="text-[11px] lg:text-[10px] font-medium uppercase tracking-[0.3em] text-[#666666] mb-8">
                 {t.about.expTitle}
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-12">
@@ -539,7 +541,7 @@ export default function PortfolioPremium() {
                     key={i}
                     className="flex items-center gap-4 border-b border-[#1A1A1A] pb-4"
                   >
-                    <span className="text-[10px] font-mono text-[#666666]">
+                    <span className="text-[11px] lg:text-[10px] font-mono text-[#666666]">
                       0{i + 1}
                     </span>
                     <span className="text-sm text-[#CCCCCC] font-light tracking-wide">
@@ -557,7 +559,7 @@ export default function PortfolioPremium() {
       <section className="py-40 px-6 md:px-12 bg-[#030303] border-t border-[#1A1A1A]">
         <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16">
           <div className="lg:col-span-4">
-            <h2 className="text-[10px] font-medium uppercase tracking-[0.3em] text-[#666666]">
+            <h2 className="text-[11px] lg:text-[10px] font-medium uppercase tracking-[0.3em] text-[#666666]">
               / {t.skills.title}
             </h2>
           </div>
@@ -570,7 +572,7 @@ export default function PortfolioPremium() {
               t.skills.other,
             ].map((category, idx) => (
               <div key={idx} className="flex flex-col">
-                <h3 className="text-[10px] font-medium uppercase tracking-[0.3em] text-[#FFFFFF] mb-8 border-b border-[#1A1A1A] pb-4">
+                <h3 className="text-[11px] lg:text-[10px] font-medium uppercase tracking-[0.3em] text-[#FFFFFF] mb-8 border-b border-[#1A1A1A] pb-4">
                   {category.title}
                 </h3>
                 <ul className="space-y-4">
@@ -595,7 +597,7 @@ export default function PortfolioPremium() {
         className="py-40 px-6 md:px-12 bg-[#030303] border-t border-[#1A1A1A]"
       >
         <div className="max-w-[1400px] mx-auto mb-24 flex justify-between items-end">
-          <h2 className="text-[10px] font-medium uppercase tracking-[0.3em] text-[#666666]">
+          <h2 className="text-[11px] lg:text-[10px] font-medium uppercase tracking-[0.3em] text-[#666666]">
             / {t.projects.title}
           </h2>
         </div>
@@ -620,7 +622,7 @@ export default function PortfolioPremium() {
         className="py-40 px-6 md:px-12 bg-[#FFFFFF] text-[#030303]"
       >
         <div className="max-w-[1400px] mx-auto flex flex-col items-center text-center">
-          <span className="text-[10px] font-medium uppercase tracking-[0.3em] text-[#888888] mb-12">
+          <span className="text-[11px] lg:text-[10px] font-medium uppercase tracking-[0.3em] text-[#888888] mb-12">
             / {t.contact.title}
           </span>
 
@@ -630,7 +632,7 @@ export default function PortfolioPremium() {
 
           <a
             href={`mailto:${t.contact.email}`}
-            className="group relative border border-[#030303] bg-transparent text-[#030303] px-16 py-6 rounded-sm text-[10px] font-medium uppercase tracking-[0.3em] overflow-hidden transition-colors duration-500 hover:text-[#FFFFFF]"
+            className="group relative border border-[#030303] bg-transparent text-[#030303] px-16 py-6 rounded-sm text-[11px] lg:text-[10px] font-medium uppercase tracking-[0.3em] overflow-hidden transition-colors duration-500 hover:text-[#FFFFFF] touch-manipulation"
           >
             <span className="relative z-10">{t.contact.email}</span>
             <div className="absolute inset-0 bg-[#030303] translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500 ease-in-out" />
@@ -639,14 +641,19 @@ export default function PortfolioPremium() {
       </section>
 
       <footer className="py-10 px-6 md:px-12 bg-[#FFFFFF] text-[#030303] border-t border-[#EAEAEA]">
-        <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-[9px] font-medium uppercase tracking-[0.3em] text-[#888888]">
+        <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-[11px] lg:text-[9px] font-medium uppercase tracking-[0.3em] text-[#888888]">
           <p>© {new Date().getFullYear()} Monde Agency.</p>
           <a
             href="#"
-            className="hover:text-[#030303] transition-colors duration-300"
+            className="p-2 -m-2 hover:text-[#030303] transition-colors duration-300 touch-manipulation"
           >
             {t.contact.linkedin}
           </a>
+        </div>
+      </footer>
+    </main>
+  );
+}
         </div>
       </footer>
     </main>
