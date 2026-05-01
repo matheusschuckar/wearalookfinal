@@ -654,8 +654,3 @@ export default function PortfolioPremium() {
     </main>
   );
 }
-        </div>
-      </footer>
-    </main>
-  );
-}
